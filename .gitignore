@@ -1,0 +1,10 @@
+node_modules
+dist
+.env
+artifacts
+cache
+coverage
+.DS_Store
+typechain-types
+cypress/videos
+cypress/screenshots

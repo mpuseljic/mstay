@@ -5,6 +5,14 @@ contract mStay {
     uint256 public listingCount;
     uint256 public reservationCount;
 
+    enum ReservationStatus {
+        Active,
+        CancelledByGuest,
+        CancelledByHost,
+        PaidOut,
+        Refunded
+    }
+
     struct Listing {
         uint256 id;
         address host;
@@ -22,7 +30,7 @@ contract mStay {
         uint256 checkOutDate;
         uint256 nights;
         uint256 totalPrice;
-        bool isCancelled;
+        ReservationStatus status;
     }
 
     mapping(uint256 => Listing) public listings;
@@ -46,6 +54,11 @@ contract mStay {
         uint256 totalPrice
 
     );
+
+    event ReservationCancelledByGuest(uint256 indexed reservationId);
+    event ReservationCancelledByHost(uint256 indexed reservationId);
+    event RefundIssued(uint256 indexed reservationId, address indexed guest, uint256 amount);
+    event PayoutReleased(uint256 indexed reservationId, address indexed host, uint256 amount);
 
     function createListing(
         string memory _title,
@@ -79,16 +92,19 @@ contract mStay {
         uint256 _listingId,
         uint256 _checkInDate,
         uint256 _checkOutDate
-    ) public {
+    ) public payable {
         require(_listingId > 0 && _listingId <= listingCount, "Listing does not exist");
         require(listings[_listingId].isActive, "Listing is not active");
         require(listings[_listingId].host != msg.sender, "Host cannot reserve own listing");
         require(_checkOutDate > _checkInDate, "Invalid dates");
 
-        uint256 nights = (_checkOutDate - _checkInDate) / 1 days;
-        require(nights > 0, "Reservation must be at least 1 night");
+        (uint256 nights, uint256 totalPrice) = calculateReservationPrice(
+            _listingId,
+            _checkInDate,
+            _checkOutDate
+        );
 
-        uint256 totalPrice = nights * listings[_listingId].pricePerNight;
+        require(msg.value == totalPrice, "Incorrect ETH amount sent");
 
         reservationCount++;
 
@@ -100,7 +116,7 @@ contract mStay {
             checkOutDate: _checkOutDate,
             nights: nights,
             totalPrice: totalPrice,
-            isCancelled: false
+            status: ReservationStatus.Active
         });
 
         emit ReservationCreated(
@@ -112,6 +128,82 @@ contract mStay {
             nights,
             totalPrice
         );
+    }
+
+    function calculateReservationPrice(
+    uint256 _listingId,
+    uint256 _checkInDate,
+    uint256 _checkOutDate
+) public view returns (uint256 nights, uint256 totalPrice) {
+    require(_listingId > 0 && _listingId <= listingCount, "Listing does not exist");
+    require(listings[_listingId].isActive, "Listing is not active");
+    require(_checkOutDate > _checkInDate, "Invalid dates");
+
+    nights = (_checkOutDate - _checkInDate) / 1 days;
+    require(nights > 0, "Reservation must be at least 1 night");
+
+    totalPrice = nights * listings[_listingId].pricePerNight;
+}
+
+    function cancelReservationByGuest(uint256 _reservationId) public {
+        require(_reservationId > 0 && _reservationId <= reservationCount, "Reservation does not exist");
+
+        Reservation storage reservation = reservations[_reservationId];
+        require(reservation.guest == msg.sender, "Only guest can cancel");
+        require(reservation.status == ReservationStatus.Active, "Reservation is not active");
+        require(block.timestamp < reservation.checkInDate, "Cannot cancel after check-in");
+
+        reservation.status = ReservationStatus.CancelledByGuest;
+
+        uint256 refundAmount = reservation.totalPrice;
+        reservation.status = ReservationStatus.Refunded;
+
+        (bool success, ) = reservation.guest.call{value: refundAmount}("");
+        require(success, "Refund failed");
+
+        emit ReservationCancelledByGuest(_reservationId);
+        emit RefundIssued(_reservationId, reservation.guest, refundAmount);
+    }
+
+    function cancelReservationByHost(uint256 _reservationId) public {
+        require(_reservationId > 0 && _reservationId <= reservationCount, "Reservation does not exist");
+
+        Reservation storage reservation = reservations[_reservationId];
+        Listing storage listing = listings[reservation.listingId];
+
+        require(listing.host == msg.sender, "Only host can cancel");
+        require(reservation.status == ReservationStatus.Active, "Reservation is not active");
+
+        reservation.status = ReservationStatus.CancelledByHost;
+
+        uint256 refundAmount = reservation.totalPrice;
+        reservation.status = ReservationStatus.Refunded;
+
+        (bool success, ) = reservation.guest.call{value: refundAmount}("");
+        require(success, "Refund failed");
+
+        emit ReservationCancelledByHost(_reservationId);
+        emit RefundIssued(_reservationId, reservation.guest, refundAmount);
+    }
+
+    function releasePayout(uint256 _reservationId) public {
+        require(_reservationId > 0 && _reservationId <= reservationCount, "Reservation does not exist");
+
+        Reservation storage reservation = reservations[_reservationId];
+        Listing storage listing = listings[reservation.listingId];
+
+        require(listing.host == msg.sender, "Only host can release payout");
+        require(reservation.status == ReservationStatus.Active, "Reservation is not active");
+        require(block.timestamp >= reservation.checkInDate, "Payout available after check-in");
+
+        reservation.status = ReservationStatus.PaidOut;
+
+        uint256 payoutAmount = reservation.totalPrice;
+
+        (bool success, ) = listing.host.call{value: payoutAmount}("");
+        require(success, "Payout failed");
+
+        emit PayoutReleased(_reservationId, listing.host, payoutAmount);
     }
 
     function getListing(uint256 _id) public view returns (Listing memory) {
@@ -154,6 +246,30 @@ function getAllReservations() public view returns (Reservation[] memory) {
 
         for (uint256 i = 1; i <= reservationCount; i++) {
             if (reservations[i].guest == _guest) {
+                result[index] = reservations[i];
+                index++;
+            }
+        }
+
+        return result;
+    }
+
+    function getReservationsByHost(address _host) public view returns (Reservation[] memory) {
+        uint256 count = 0;
+
+        for (uint256 i = 1; i <= reservationCount; i++) {
+            Listing memory listing = listings[reservations[i].listingId];
+            if (listing.host == _host) {
+                count++;
+            }
+        }
+
+        Reservation[] memory result = new Reservation[](count);
+        uint256 index = 0;
+
+        for (uint256 i = 1; i <= reservationCount; i++) {
+            Listing memory listing = listings[reservations[i].listingId];
+            if (listing.host == _host) {
                 result[index] = reservations[i];
                 index++;
             }

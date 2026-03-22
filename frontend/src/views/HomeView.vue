@@ -7,6 +7,12 @@ import {
   fetchAllListings,
   makeReservation,
   fetchReservationsByGuest,
+  cancelReservationByGuest,
+  cancelReservationByHost,
+  releasePayout,
+  fromWeiToEth,
+  calculateReservationPrice,
+  fetchReservationsByHost,
 } from '../services/web3'
 
 const walletAddress = ref('')
@@ -30,6 +36,34 @@ const reservationForm = ref({
 
 const listings = ref([])
 const myReservations = ref([])
+const hostReservations = ref([])
+const reservationPricePreview = ref('0')
+
+async function updateReservationPreview() {
+  try {
+    if (
+      !reservationForm.value.listingId ||
+      !reservationForm.value.checkIn ||
+      !reservationForm.value.checkOut
+    ) {
+      reservationPricePreview.value = '0'
+      return
+    }
+
+    const checkInTs = toUnixTimestamp(reservationForm.value.checkIn)
+    const checkOutTs = toUnixTimestamp(reservationForm.value.checkOut)
+
+    const [, totalPriceWei] = await calculateReservationPrice(
+      Number(reservationForm.value.listingId),
+      checkInTs,
+      checkOutTs,
+    )
+
+    reservationPricePreview.value = fromWeiToEth(totalPriceWei)
+  } catch {
+    reservationPricePreview.value = '0'
+  }
+}
 
 const selectedListing = computed(() => {
   return (
@@ -68,6 +102,8 @@ async function handleConnect() {
     successMsg.value = ''
     walletAddress.value = await connectWallet()
     successMsg.value = 'MetaMask je uspješno spojen.'
+    await loadMyReservations()
+    await loadHostReservations()
   } catch (err) {
     errorMsg.value = err.message || 'Greška pri spajanju MetaMaska.'
   }
@@ -94,7 +130,7 @@ async function loadListings() {
       host: item.host,
       title: item.title,
       location: item.location,
-      pricePerNight: item.pricePerNight,
+      pricePerNight: fromWeiToEth(item.pricePerNight),
       isActive: item.isActive,
     }))
   } catch (error) {
@@ -113,11 +149,49 @@ async function loadMyReservations() {
       checkInDate: formatDate(item.checkInDate),
       checkOutDate: formatDate(item.checkOutDate),
       nights: item.nights.toString(),
-      totalPrice: item.totalPrice.toString(),
-      isCancelled: item.isCancelled,
+      totalPrice: fromWeiToEth(item.totalPrice),
+      status: item.status.toString(),
     }))
   } catch (err) {
     errorMsg.value = err.message || 'Greška pri dohvaćanju rezervacija.'
+  }
+}
+
+async function loadHostReservations() {
+  try {
+    if (!walletAddress.value) return
+
+    const data = await fetchReservationsByHost(walletAddress.value)
+
+    hostReservations.value = data.map((item) => ({
+      id: item.id.toString(),
+      listingId: item.listingId.toString(),
+      guest: item.guest,
+      checkInDate: formatDate(item.checkInDate),
+      checkOutDate: formatDate(item.checkOutDate),
+      nights: item.nights.toString(),
+      totalPrice: fromWeiToEth(item.totalPrice),
+      status: item.status.toString(),
+    }))
+  } catch (err) {
+    errorMsg.value = err.message || 'Greška pri dohvaćanju host rezervacija.'
+  }
+}
+
+function getReservationStatusLabel(status) {
+  switch (String(status)) {
+    case '0':
+      return 'Aktivna'
+    case '1':
+      return 'Otkazana od gosta'
+    case '2':
+      return 'Otkazana od domaćina'
+    case '3':
+      return 'Isplaćeno domaćinu'
+    case '4':
+      return 'Refundirano'
+    default:
+      return 'Nepoznato'
   }
 }
 
@@ -210,10 +284,52 @@ async function handleReservation() {
     }
 
     await loadMyReservations()
+    await loadHostReservations()
   } catch (err) {
     errorMsg.value = err.message || 'Greška pri kreiranju rezervacije.'
   } finally {
     isBooking.value = false
+  }
+}
+
+async function handleGuestCancel(reservationId) {
+  try {
+    errorMsg.value = ''
+    successMsg.value = ''
+    await cancelReservationByGuest(Number(reservationId))
+    successMsg.value = 'Rezervacija je otkazana i refundirana.'
+    await loadMyReservations()
+    await loadHostReservations()
+  } catch (err) {
+    errorMsg.value = err.message || 'Greška pri otkazivanju rezervacije.'
+  }
+}
+
+async function handleHostCancel(reservationId) {
+  try {
+    errorMsg.value = ''
+    successMsg.value = ''
+
+    await cancelReservationByHost(Number(reservationId))
+
+    successMsg.value = 'Rezervacija je otkazana od domaćina i gostu je vraćen novac.'
+    await loadMyReservations()
+    await loadHostReservations()
+  } catch (err) {
+    errorMsg.value = err.message || 'Greška pri otkazivanju rezervacije od strane domaćina.'
+  }
+}
+
+async function handleHostPayout(reservationId) {
+  try {
+    errorMsg.value = ''
+    successMsg.value = ''
+    await releasePayout(Number(reservationId))
+    successMsg.value = 'Sredstva su uspješno isplaćena domaćinu.'
+    await loadMyReservations()
+    await loadHostReservations()
+  } catch (err) {
+    errorMsg.value = err.message || 'Greška pri isplati domaćinu.'
   }
 }
 
@@ -357,7 +473,7 @@ onMounted(async () => {
           <div v-for="reservation in myReservations" :key="reservation.id" class="listing-card">
             <div class="listing-top">
               <h3>Rezervacija #{{ reservation.id }}</h3>
-              <span class="badge">{{ reservation.isCancelled ? 'Otkazana' : 'Aktivna' }}</span>
+              <span class="badge">{{ getReservationStatusLabel(reservation.status) }}</span>
             </div>
 
             <p><strong>ID oglasa:</strong> {{ reservation.listingId }}</p>
@@ -365,10 +481,71 @@ onMounted(async () => {
             <p><strong>Check-out:</strong> {{ reservation.checkOutDate }}</p>
             <p><strong>Noćenja:</strong> {{ reservation.nights }}</p>
             <p><strong>Ukupna cijena:</strong> {{ reservation.totalPrice }} ETH</p>
+
+            <div class="reservation-actions">
+              <button
+                class="danger-btn"
+                @click="handleGuestCancel(reservation.id)"
+                v-if="reservation.status === '0'"
+              >
+                Otkaži kao gost
+              </button>
+
+              <button
+                class="success-btn"
+                @click="handleHostPayout(reservation.id)"
+                v-if="reservation.status === '0'"
+              >
+                Isplati domaćinu
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
+      <div class="listings-section">
+        <h2>Rezervacije za moje oglase</h2>
+
+        <p v-if="hostReservations.length === 0" class="empty-text">
+          Nema rezervacija za tvoje oglase.
+        </p>
+
+        <div v-else class="listing-grid">
+          <div v-for="reservation in hostReservations" :key="reservation.id" class="listing-card">
+            <div class="listing-top">
+              <h3>Rezervacija #{{ reservation.id }}</h3>
+              <span class="badge">
+                {{ getReservationStatusLabel(reservation.status) }}
+              </span>
+            </div>
+
+            <p><strong>ID oglasa:</strong> {{ reservation.listingId }}</p>
+            <p><strong>Gost:</strong> {{ reservation.guest }}</p>
+            <p><strong>Check-in:</strong> {{ reservation.checkInDate }}</p>
+            <p><strong>Check-out:</strong> {{ reservation.checkOutDate }}</p>
+            <p><strong>Noćenja:</strong> {{ reservation.nights }}</p>
+            <p><strong>Ukupna cijena:</strong> {{ reservation.totalPrice }} ETH</p>
+
+            <div class="reservation-actions">
+              <button
+                class="danger-btn"
+                @click="handleHostCancel(reservation.id)"
+                v-if="reservation.status === '0'"
+              >
+                Otkaži kao domaćin
+              </button>
+
+              <button
+                class="success-btn"
+                @click="handleHostPayout(reservation.id)"
+                v-if="reservation.status === '0'"
+              >
+                Isplati domaćinu
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
       <p class="success" v-if="successMsg">{{ successMsg }}</p>
       <p class="error" v-if="errorMsg">{{ errorMsg }}</p>
     </div>
@@ -526,6 +703,22 @@ input {
 .reserve-btn:hover {
   opacity: 0.95;
 }
+
+.reservation-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+
+.danger-btn {
+  background: #dc2626;
+}
+
+.success-btn {
+  background: #16a34a;
+}
+
 .success {
   color: #166534;
   margin-top: 16px;

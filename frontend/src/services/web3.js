@@ -1,4 +1,4 @@
-import { BrowserProvider, Contract } from 'ethers'
+import { BrowserProvider, Contract, parseEther, formatEther } from 'ethers'
 import { MSTAY_CONTRACT_ADDRESS } from '../contracts/config'
 import { MSTAY_ABI } from '../contracts/mstayAbi'
 
@@ -40,7 +40,9 @@ export async function getMStayContract(withSigner = false) {
 
 export async function createListing(title, location, pricePerNight) {
   const contract = await getMStayContract(true)
-  const tx = await contract.createListing(title, location, pricePerNight)
+  const priceInWei = parseEther(pricePerNight.toString())
+
+  const tx = await contract.createListing(title, location, priceInWei)
   await tx.wait()
   return tx
 }
@@ -50,9 +52,22 @@ export async function fetchAllListings() {
   return await contract.getAllListings()
 }
 
+export async function calculateReservationPrice(listingId, checkInDate, checkOutDate) {
+  const contract = await getMStayContract(false)
+  return await contract.calculateReservationPrice(listingId, checkInDate, checkOutDate)
+}
+
 export async function makeReservation(listingId, checkInDate, checkOutDate) {
   const contract = await getMStayContract(true)
-  const tx = await contract.makeReservation(listingId, checkInDate, checkOutDate)
+  const [, totalPriceWei] = await contract.calculateReservationPrice(
+    listingId,
+    checkInDate,
+    checkOutDate,
+  )
+
+  const tx = await contract.makeReservation(listingId, checkInDate, checkOutDate, {
+    value: totalPriceWei,
+  })
   await tx.wait()
   return tx
 }
@@ -60,4 +75,34 @@ export async function makeReservation(listingId, checkInDate, checkOutDate) {
 export async function fetchReservationsByGuest(guestAddress) {
   const contract = await getMStayContract(false)
   return await contract.getReservationsByGuest(guestAddress)
+}
+
+export async function fetchReservationsByHost(hostAddress) {
+  const contract = await getMStayContract(false)
+  return await contract.getReservationsByHost(hostAddress)
+}
+
+export async function cancelReservationByGuest(reservationId) {
+  const contract = await getMStayContract(true)
+  const tx = await contract.cancelReservationByGuest(reservationId)
+  await tx.wait()
+  return tx
+}
+
+export async function cancelReservationByHost(reservationId) {
+  const contract = await getMStayContract(true)
+  const tx = await contract.cancelReservationByHost(reservationId)
+  await tx.wait()
+  return tx
+}
+
+export async function releasePayout(reservationId) {
+  const contract = await getMStayContract(true)
+  const tx = await contract.releasePayout(reservationId)
+  await tx.wait()
+  return tx
+}
+
+export function fromWeiToEth(value) {
+  return formatEther(value)
 }

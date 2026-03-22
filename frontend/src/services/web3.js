@@ -32,3 +32,15 @@ export async function getMStayContract(withSigner = false) {
 
   return new Contract(MSTAY_CONTRACT_ADDRESS, MSTAY_ABI, provider)
 }
+
+export async function createListing(title, location, pricePerNight) {
+  const contract = await getMStayContract(true)
+  const tx = await contract.createListing(title, location, pricePerNight)
+  await tx.wait()
+  return tx
+}
+
+export async function fetchAllListings() {
+  const contract = await getMStayContract(false)
+  return await contract.getAllListings()
+}

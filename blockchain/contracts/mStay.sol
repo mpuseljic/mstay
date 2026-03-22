@@ -28,6 +28,9 @@ contract mStay {
         string memory _location,
         uint256 _pricePerNight
     ) public {
+        require(bytes(_title).length > 0, "Title is required");
+        require(bytes(_location).length > 0, "Location is required");
+        require(_pricePerNight > 0, "Price must be greater than 0");
         listingCount++;
 
         listings[listingCount] = Listing({
@@ -49,6 +52,17 @@ contract mStay {
     }
 
     function getListing(uint256 _id) public view returns (Listing memory) {
+        require(_id > 0 && _id <= listingCount, "Listing does not exist");
         return listings[_id];
+    }
+
+    function getAllListings() public view returns (Listing[] memory){
+        Listing[] memory result = new Listing[](listingCount);
+
+        for(uint256 i = 0; i < listingCount; i++){
+            result[i] = listings[i + 1];
+        }
+
+        return result;
     }
 }

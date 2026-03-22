@@ -60,6 +60,51 @@ export const MSTAY_ABI = [
     type: 'function',
   },
   {
+    inputs: [],
+    name: 'getAllListings',
+    outputs: [
+      {
+        components: [
+          {
+            internalType: 'uint256',
+            name: 'id',
+            type: 'uint256',
+          },
+          {
+            internalType: 'address',
+            name: 'host',
+            type: 'address',
+          },
+          {
+            internalType: 'string',
+            name: 'title',
+            type: 'string',
+          },
+          {
+            internalType: 'string',
+            name: 'location',
+            type: 'string',
+          },
+          {
+            internalType: 'uint256',
+            name: 'pricePerNight',
+            type: 'uint256',
+          },
+          {
+            internalType: 'bool',
+            name: 'isActive',
+            type: 'bool',
+          },
+        ],
+        internalType: 'struct mStay.Listing[]',
+        name: '',
+        type: 'tuple[]',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
     inputs: [
       {
         internalType: 'uint256',

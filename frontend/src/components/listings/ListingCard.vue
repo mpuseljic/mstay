@@ -1,4 +1,12 @@
 <script setup>
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
+
+function openDetails() {
+  router.push(`/listings/${props.listing.id}`)
+}
+
 const props = defineProps({
   listing: {
     type: Object,
@@ -25,14 +33,14 @@ function shortenAddress(address) {
 
 <template>
   <article class="card">
-    <div class="card__image">
+    <div class="card__image" @click="openDetails">
       <span class="card__image-badge">mStay</span>
     </div>
 
     <div class="card__body">
       <div class="card__top">
         <div>
-          <h3>{{ listing.title }}</h3>
+          <h3 class="clickable-title" @click="openDetails">{{ listing.title }}</h3>
           <p>{{ listing.location }}</p>
         </div>
 
@@ -90,6 +98,14 @@ function shortenAddress(address) {
   padding: 8px 12px;
   font-size: 0.82rem;
   font-weight: 700;
+}
+
+.card__image {
+  cursor: pointer;
+}
+
+.clickable-title {
+  cursor: pointer;
 }
 
 .card__body {

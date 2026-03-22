@@ -1,0 +1,543 @@
+<script setup>
+import { ref, computed, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
+import AppNavbar from '../components/layout/AppNavbar.vue'
+import { useMstay } from '../composables/useMstay'
+
+const route = useRoute()
+
+const {
+  walletAddress,
+  listings,
+  successMsg,
+  errorMsg,
+  connectCurrentWallet,
+  loadListings,
+  makeReservation,
+  calculateReservationPrice,
+} = useMstay()
+
+const listing = ref(null)
+const isBooking = ref(false)
+const reservationPricePreview = ref('0')
+
+const reservationForm = ref({
+  checkIn: '',
+  checkOut: '',
+})
+
+const reservationNights = computed(() => {
+  if (!reservationForm.value.checkIn || !reservationForm.value.checkOut) return 0
+
+  const checkIn = new Date(reservationForm.value.checkIn)
+  const checkOut = new Date(reservationForm.value.checkOut)
+  const diffMs = checkOut.getTime() - checkIn.getTime()
+
+  if (diffMs <= 0) return 0
+
+  return Math.floor(diffMs / (1000 * 60 * 60 * 24))
+})
+
+const isOwnListing = computed(() => {
+  if (!walletAddress.value || !listing.value) return false
+  return listing.value.host.toLowerCase() === walletAddress.value.toLowerCase()
+})
+
+function shortenAddress(address) {
+  return `${address.slice(0, 6)}...${address.slice(-4)}`
+}
+
+function toUnixTimestamp(dateString) {
+  return Math.floor(new Date(dateString).getTime() / 1000)
+}
+
+function fromWei(value) {
+  return (Number(value) / 1e18).toString()
+}
+
+async function loadCurrentListing() {
+  await loadListings()
+
+  listing.value = listings.value.find((item) => item.id === String(route.params.id)) || null
+}
+
+async function updateReservationPreview() {
+  try {
+    if (!listing.value || !reservationForm.value.checkIn || !reservationForm.value.checkOut) {
+      reservationPricePreview.value = '0'
+      return
+    }
+
+    const checkInTs = toUnixTimestamp(reservationForm.value.checkIn)
+    const checkOutTs = toUnixTimestamp(reservationForm.value.checkOut)
+
+    const [, totalPriceWei] = await calculateReservationPrice(
+      Number(listing.value.id),
+      checkInTs,
+      checkOutTs,
+    )
+
+    reservationPricePreview.value = fromWei(totalPriceWei)
+  } catch {
+    reservationPricePreview.value = '0'
+  }
+}
+
+async function handleReservation() {
+  if (!walletAddress.value || !listing.value) return
+
+  const checkInTs = toUnixTimestamp(reservationForm.value.checkIn)
+  const checkOutTs = toUnixTimestamp(reservationForm.value.checkOut)
+
+  try {
+    isBooking.value = true
+
+    await makeReservation(Number(listing.value.id), checkInTs, checkOutTs)
+
+    reservationForm.value.checkIn = ''
+    reservationForm.value.checkOut = ''
+    reservationPricePreview.value = '0'
+  } finally {
+    isBooking.value = false
+  }
+}
+
+onMounted(async () => {
+  await loadCurrentListing()
+})
+</script>
+
+<template>
+  <div>
+    <AppNavbar :wallet-address="walletAddress" @connect="connectCurrentWallet" />
+
+    <main class="page" v-if="listing">
+      <section class="details-head">
+        <div>
+          <h1>{{ listing.title }}</h1>
+          <p>{{ listing.location }}</p>
+        </div>
+
+        <div class="head-badges">
+          <span :class="['badge', listing.isActive ? 'badge--success' : 'badge--muted']">
+            {{ listing.isActive ? 'Aktivan' : 'Neaktivan' }}
+          </span>
+          <span class="host-badge">Host: {{ shortenAddress(listing.host) }}</span>
+        </div>
+      </section>
+
+      <section v-if="successMsg" class="alert alert--success">{{ successMsg }}</section>
+      <section v-if="errorMsg" class="alert alert--error">{{ errorMsg }}</section>
+
+      <section class="gallery">
+        <div class="gallery__main">
+          <span class="gallery__label">mStay Stay</span>
+        </div>
+        <div class="gallery__side">
+          <div class="gallery__mini"></div>
+          <div class="gallery__mini"></div>
+        </div>
+      </section>
+
+      <section class="details-layout">
+        <div class="details-content">
+          <div class="content-card">
+            <h2>About this stay</h2>
+            <p>
+              Ovaj smještaj je objavljen na mStay platformi i može se rezervirati kroz escrow model
+              plaćanja putem blockchain transakcije.
+            </p>
+
+            <div class="info-grid">
+              <div class="info-item">
+                <span>ID oglasa</span>
+                <strong>{{ listing.id }}</strong>
+              </div>
+              <div class="info-item">
+                <span>Lokacija</span>
+                <strong>{{ listing.location }}</strong>
+              </div>
+              <div class="info-item">
+                <span>Cijena po noći</span>
+                <strong>{{ listing.pricePerNight }} ETH</strong>
+              </div>
+              <div class="info-item">
+                <span>Status</span>
+                <strong>{{ listing.isActive ? 'Aktivan' : 'Neaktivan' }}</strong>
+              </div>
+            </div>
+          </div>
+
+          <div class="content-card">
+            <h2>What this place offers</h2>
+            <div class="amenities">
+              <div class="amenity">Self check-in</div>
+              <div class="amenity">On-chain payment</div>
+              <div class="amenity">Escrow protection</div>
+              <div class="amenity">MetaMask booking</div>
+            </div>
+          </div>
+        </div>
+
+        <aside class="booking-sidebar">
+          <div class="booking-card">
+            <div class="price-top">
+              <strong>{{ listing.pricePerNight }} ETH</strong>
+              <span>/ noć</span>
+            </div>
+
+            <div class="form-group">
+              <label>Check-in</label>
+              <input
+                v-model="reservationForm.checkIn"
+                type="date"
+                @change="updateReservationPreview"
+              />
+            </div>
+
+            <div class="form-group">
+              <label>Check-out</label>
+              <input
+                v-model="reservationForm.checkOut"
+                type="date"
+                @change="updateReservationPreview"
+              />
+            </div>
+
+            <div v-if="reservationNights > 0" class="preview">
+              <div class="preview-row">
+                <span>Noćenja</span>
+                <strong>{{ reservationNights }}</strong>
+              </div>
+              <div class="preview-row">
+                <span>Ukupna cijena</span>
+                <strong>{{ reservationPricePreview }} ETH</strong>
+              </div>
+            </div>
+
+            <button
+              class="book-btn"
+              @click="handleReservation"
+              :disabled="isBooking || isOwnListing || !listing.isActive"
+            >
+              {{
+                isOwnListing ? 'Vlastiti oglas' : isBooking ? 'Slanje transakcije...' : 'Rezerviraj'
+              }}
+            </button>
+
+            <p class="booking-note">Sredstva se drže u escrowu do trenutka isplate domaćinu.</p>
+          </div>
+        </aside>
+      </section>
+    </main>
+
+    <main class="page" v-else>
+      <section class="empty-page">
+        <h1>Oglas nije pronađen</h1>
+        <p>Provjeri ID oglasa ili se vrati na popis svih oglasa.</p>
+      </section>
+    </main>
+  </div>
+</template>
+
+<style scoped>
+.page {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 32px 24px 56px;
+}
+
+.details-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 18px;
+  margin-bottom: 22px;
+}
+
+.details-head h1 {
+  margin: 0 0 6px;
+  font-size: 2.4rem;
+}
+
+.details-head p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 1rem;
+}
+
+.head-badges {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.host-badge,
+.badge {
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.badge--success {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.badge--muted {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.host-badge {
+  background: white;
+  border: 1px solid var(--border);
+}
+
+.gallery {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.gallery__main,
+.gallery__mini {
+  background:
+    linear-gradient(135deg, rgba(255, 56, 92, 0.16), rgba(255, 56, 92, 0.04)),
+    linear-gradient(135deg, #f9fafb, #f3f4f6);
+  border-radius: 24px;
+  border: 1px solid var(--border);
+}
+
+.gallery__main {
+  min-height: 420px;
+  display: flex;
+  align-items: end;
+  padding: 20px;
+}
+
+.gallery__label {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-weight: 700;
+}
+
+.gallery__side {
+  display: grid;
+  grid-template-rows: 1fr 1fr;
+  gap: 16px;
+}
+
+.details-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 380px;
+  gap: 26px;
+}
+
+.details-content {
+  display: grid;
+  gap: 20px;
+}
+
+.content-card {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 24px;
+  box-shadow: var(--shadow);
+}
+
+.content-card h2 {
+  margin: 0 0 14px;
+}
+
+.content-card p {
+  margin: 0;
+  color: #4b5563;
+  line-height: 1.75;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.info-item {
+  background: #fafafa;
+  border: 1px solid #f0f0f0;
+  border-radius: 18px;
+  padding: 16px;
+}
+
+.info-item span {
+  display: block;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.amenities {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.amenity {
+  background: #fff7f8;
+  border: 1px solid #ffd7df;
+  border-radius: 16px;
+  padding: 14px 16px;
+  font-weight: 600;
+}
+
+.booking-sidebar {
+  position: relative;
+}
+
+.booking-card {
+  position: sticky;
+  top: 100px;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 22px;
+  box-shadow: var(--shadow);
+}
+
+.price-top {
+  display: flex;
+  align-items: end;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.price-top strong {
+  font-size: 1.8rem;
+}
+
+.price-top span {
+  color: var(--muted);
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.form-group label {
+  font-weight: 700;
+}
+
+input {
+  border: 1px solid #dddddd;
+  border-radius: 16px;
+  padding: 14px 16px;
+}
+
+.preview {
+  background: #fff5f7;
+  border: 1px solid #ffd7df;
+  border-radius: 16px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+}
+
+.preview-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+}
+
+.book-btn {
+  width: 100%;
+  border: 0;
+  border-radius: 16px;
+  padding: 15px 16px;
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.book-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.booking-note {
+  margin: 14px 0 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.6;
+}
+
+.alert {
+  border-radius: 16px;
+  padding: 14px 16px;
+  margin-bottom: 18px;
+  font-weight: 600;
+}
+
+.alert--success {
+  background: #ecfdf3;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+}
+
+.alert--error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+}
+
+.empty-page {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 36px;
+  text-align: center;
+}
+
+.empty-page h1 {
+  margin: 0 0 8px;
+}
+
+.empty-page p {
+  margin: 0;
+  color: var(--muted);
+}
+
+@media (max-width: 1100px) {
+  .gallery,
+  .details-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .booking-card {
+    position: static;
+  }
+}
+
+@media (max-width: 768px) {
+  .details-head {
+    flex-direction: column;
+    align-items: start;
+  }
+
+  .details-head h1 {
+    font-size: 2rem;
+  }
+
+  .info-grid,
+  .amenities {
+    grid-template-columns: 1fr;
+  }
+}
+</style>

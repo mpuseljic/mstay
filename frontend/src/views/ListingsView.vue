@@ -22,10 +22,7 @@ const filteredListings = computed(() => {
 })
 
 function handleReserve(listing) {
-  router.push({
-    path: '/my-trips',
-    query: { listingId: listing.id },
-  })
+  router.push(`/listings/${listing.id}`)
 }
 
 onMounted(async () => {

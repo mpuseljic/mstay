@@ -4,6 +4,7 @@ import ListingsView from '@/views/ListingsView.vue'
 import CreateListingView from '@/views/CreateListingView.vue'
 import MyTripsView from '@/views/MyTripsView.vue'
 import MyHostingView from '@/views/MyHostingView.vue'
+import ListingDetailsView from '@/views/ListingDetailsView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -17,6 +18,11 @@ const router = createRouter({
       path: '/listings',
       name: 'listings',
       component: ListingsView,
+    },
+    {
+      path: '/listings/:id',
+      name: 'listings-details',
+      component: ListingDetailsView,
     },
     {
       path: '/create-listing',

@@ -1,12 +1,20 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { connectWallet, getMStayContract, createListing, fetchAllListings } from '../services/web3'
+import {
+  connectWallet,
+  getMStayContract,
+  createListing,
+  fetchAllListings,
+  makeReservation,
+  fetchReservationsByGuest,
+} from '../services/web3'
 
 const walletAddress = ref('')
 const listingCount = ref('')
 const errorMsg = ref('')
 const successMsg = ref('')
 const isSubmitting = ref(false)
+const isBooking = ref(false)
 
 const form = ref({
   title: '',
@@ -14,7 +22,22 @@ const form = ref({
   pricePerNight: '',
 })
 
+const reservationForm = ref({
+  listingId: '',
+  checkIn: '',
+  checkOut: '',
+})
+
 const listings = ref([])
+const myReservations = ref([])
+
+function toUnixTimestamp(dateString) {
+  return Math.floor(new Date(dateString).getTime() / 1000)
+}
+
+function formatDate(unix) {
+  return new Date(Number(unix) * 1000).toLocaleDateString('hr-HR')
+}
 
 async function handleConnect() {
   try {
@@ -56,6 +79,25 @@ async function loadListings() {
   }
 }
 
+async function loadMyReservations() {
+  try {
+    if (!walletAddress.value) return
+    const data = await fetchReservationsByGuest(walletAddress.value)
+    myReservations.value = data.map((item) => ({
+      id: item.id.toString(),
+      listingId: item.listingId.toString(),
+      guest: item.guest,
+      checkInDate: formatDate(item.checkInDate),
+      checkOutDate: formatDate(item.checkOutDate),
+      nights: item.nights.toString(),
+      totalPrice: item.totalPrice.toString(),
+      isCancelled: item.isCancelled,
+    }))
+  } catch (err) {
+    errorMsg.value = err.message || 'Greška pri dohvaćanju rezervacija.'
+  }
+}
+
 async function handleCreateListing() {
   try {
     errorMsg.value = ''
@@ -87,6 +129,48 @@ async function handleCreateListing() {
   }
 }
 
+async function handleReservation() {
+  try {
+    errorMsg.value = ''
+    successMsg.value = ''
+
+    if (!walletAddress.value) {
+      errorMsg.value = 'Prvo spoji MetaMask.'
+      return
+    }
+
+    if (
+      !reservationForm.value.listingId ||
+      !reservationForm.value.checkIn ||
+      !reservationForm.value.checkOut
+    ) {
+      errorMsg.value = 'Sva polja za rezervaciju su obavezna.'
+      return
+    }
+
+    const checkInTs = toUnixTimestamp(reservationForm.value.checkIn)
+    const checkOutTs = toUnixTimestamp(reservationForm.value.checkOut)
+
+    isBooking.value = true
+
+    await makeReservation(Number(reservationForm.value.listingId), checkInTs, checkOutTs)
+
+    successMsg.value = 'Rezervacija je uspješno kreirana.'
+
+    reservationForm.value = {
+      listingId: '',
+      checkIn: '',
+      checkOut: '',
+    }
+
+    await loadMyReservations()
+  } catch (err) {
+    errorMsg.value = err.message || 'Greška pri kreiranju rezervacije.'
+  } finally {
+    isBooking.value = false
+  }
+}
+
 onMounted(async () => {
   await loadListingCount()
   await loadListings()
@@ -97,12 +181,13 @@ onMounted(async () => {
   <main class="page">
     <div class="card">
       <h1>mStay</h1>
-      <p class="subtitle">Dodavanje i prikaz oglasa preko smart contracta</p>
+      <p class="subtitle">Dodavanje oglasa i rezervacija preko smart contracta</p>
 
       <div class="actions">
         <button @click="handleConnect">Spoji MetaMask</button>
         <button @click="loadListingCount">Dohvati broj oglasa</button>
         <button @click="loadListings">Osvježi oglase</button>
+        <button @click="loadMyReservations">Moje rezervacije</button>
       </div>
 
       <div class="info-box" v-if="walletAddress">
@@ -138,6 +223,29 @@ onMounted(async () => {
         </button>
       </div>
 
+      <div class="form-card">
+        <h2>Napravi rezervaciju</h2>
+
+        <div class="form-group">
+          <label>ID oglasa</label>
+          <input v-model="reservationForm.listingId" type="number" min="1" placeholder="Npr. 1" />
+        </div>
+
+        <div class="form-group">
+          <label>Check-in datum</label>
+          <input v-model="reservationForm.checkIn" type="date" />
+        </div>
+
+        <div class="form-group">
+          <label>Check-out datum</label>
+          <input v-model="reservationForm.checkOut" type="date" />
+        </div>
+
+        <button @click="handleReservation" :disabled="isBooking">
+          {{ isBooking ? 'Spremanje...' : 'Rezerviraj' }}
+        </button>
+      </div>
+
       <div class="listings-section">
         <h2>Popis oglasa</h2>
 
@@ -154,6 +262,27 @@ onMounted(async () => {
             <p><strong>Lokacija:</strong> {{ listing.location }}</p>
             <p><strong>Cijena/noć:</strong> {{ listing.pricePerNight }} ETH</p>
             <p><strong>Domaćin:</strong> {{ listing.host }}</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="listings-section">
+        <h2>Moje rezervacije</h2>
+
+        <p v-if="myReservations.length === 0" class="empty-text">Nema rezervacija za prikaz.</p>
+
+        <div v-else class="listing-grid">
+          <div v-for="reservation in myReservations" :key="reservation.id" class="listing-card">
+            <div class="listing-top">
+              <h3>Rezervacija #{{ reservation.id }}</h3>
+              <span class="badge">{{ reservation.isCancelled ? 'Otkazana' : 'Aktivna' }}</span>
+            </div>
+
+            <p><strong>ID oglasa:</strong> {{ reservation.listingId }}</p>
+            <p><strong>Check-in:</strong> {{ reservation.checkInDate }}</p>
+            <p><strong>Check-out:</strong> {{ reservation.checkOutDate }}</p>
+            <p><strong>Noćenja:</strong> {{ reservation.nights }}</p>
+            <p><strong>Ukupna cijena:</strong> {{ reservation.totalPrice }} ETH</p>
           </div>
         </div>
       </div>

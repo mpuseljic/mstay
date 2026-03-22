@@ -22,6 +22,11 @@ export async function getProvider() {
   return new BrowserProvider(window.ethereum)
 }
 
+export async function getSigner() {
+  const provider = await getProvider()
+  return await provider.getSigner()
+}
+
 export async function getMStayContract(withSigner = false) {
   const provider = await getProvider()
 
@@ -43,4 +48,16 @@ export async function createListing(title, location, pricePerNight) {
 export async function fetchAllListings() {
   const contract = await getMStayContract(false)
   return await contract.getAllListings()
+}
+
+export async function makeReservation(listingId, checkInDate, checkOutDate) {
+  const contract = await getMStayContract(true)
+  const tx = await contract.makeReservation(listingId, checkInDate, checkOutDate)
+  await tx.wait()
+  return tx
+}
+
+export async function fetchReservationsByGuest(guestAddress) {
+  const contract = await getMStayContract(false)
+  return await contract.getReservationsByGuest(guestAddress)
 }

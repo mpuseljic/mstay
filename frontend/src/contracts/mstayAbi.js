@@ -37,6 +37,55 @@ export const MSTAY_ABI = [
     type: 'event',
   },
   {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: 'uint256',
+        name: 'id',
+        type: 'uint256',
+      },
+      {
+        indexed: true,
+        internalType: 'uint256',
+        name: 'listingId',
+        type: 'uint256',
+      },
+      {
+        indexed: true,
+        internalType: 'address',
+        name: 'guest',
+        type: 'address',
+      },
+      {
+        indexed: false,
+        internalType: 'uint256',
+        name: 'checkInDate',
+        type: 'uint256',
+      },
+      {
+        indexed: false,
+        internalType: 'uint256',
+        name: 'checkOutDate',
+        type: 'uint256',
+      },
+      {
+        indexed: false,
+        internalType: 'uint256',
+        name: 'nights',
+        type: 'uint256',
+      },
+      {
+        indexed: false,
+        internalType: 'uint256',
+        name: 'totalPrice',
+        type: 'uint256',
+      },
+    ],
+    name: 'ReservationCreated',
+    type: 'event',
+  },
+  {
     inputs: [
       {
         internalType: 'string',
@@ -105,6 +154,61 @@ export const MSTAY_ABI = [
     type: 'function',
   },
   {
+    inputs: [],
+    name: 'getAllReservations',
+    outputs: [
+      {
+        components: [
+          {
+            internalType: 'uint256',
+            name: 'id',
+            type: 'uint256',
+          },
+          {
+            internalType: 'uint256',
+            name: 'listingId',
+            type: 'uint256',
+          },
+          {
+            internalType: 'address',
+            name: 'guest',
+            type: 'address',
+          },
+          {
+            internalType: 'uint256',
+            name: 'checkInDate',
+            type: 'uint256',
+          },
+          {
+            internalType: 'uint256',
+            name: 'checkOutDate',
+            type: 'uint256',
+          },
+          {
+            internalType: 'uint256',
+            name: 'nights',
+            type: 'uint256',
+          },
+          {
+            internalType: 'uint256',
+            name: 'totalPrice',
+            type: 'uint256',
+          },
+          {
+            internalType: 'bool',
+            name: 'isCancelled',
+            type: 'bool',
+          },
+        ],
+        internalType: 'struct mStay.Reservation[]',
+        name: '',
+        type: 'tuple[]',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
     inputs: [
       {
         internalType: 'uint256',
@@ -150,6 +254,67 @@ export const MSTAY_ABI = [
         internalType: 'struct mStay.Listing',
         name: '',
         type: 'tuple',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'address',
+        name: '_guest',
+        type: 'address',
+      },
+    ],
+    name: 'getReservationsByGuest',
+    outputs: [
+      {
+        components: [
+          {
+            internalType: 'uint256',
+            name: 'id',
+            type: 'uint256',
+          },
+          {
+            internalType: 'uint256',
+            name: 'listingId',
+            type: 'uint256',
+          },
+          {
+            internalType: 'address',
+            name: 'guest',
+            type: 'address',
+          },
+          {
+            internalType: 'uint256',
+            name: 'checkInDate',
+            type: 'uint256',
+          },
+          {
+            internalType: 'uint256',
+            name: 'checkOutDate',
+            type: 'uint256',
+          },
+          {
+            internalType: 'uint256',
+            name: 'nights',
+            type: 'uint256',
+          },
+          {
+            internalType: 'uint256',
+            name: 'totalPrice',
+            type: 'uint256',
+          },
+          {
+            internalType: 'bool',
+            name: 'isCancelled',
+            type: 'bool',
+          },
+        ],
+        internalType: 'struct mStay.Reservation[]',
+        name: '',
+        type: 'tuple[]',
       },
     ],
     stateMutability: 'view',
@@ -206,6 +371,96 @@ export const MSTAY_ABI = [
       {
         internalType: 'bool',
         name: 'isActive',
+        type: 'bool',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'uint256',
+        name: '_listingId',
+        type: 'uint256',
+      },
+      {
+        internalType: 'uint256',
+        name: '_checkInDate',
+        type: 'uint256',
+      },
+      {
+        internalType: 'uint256',
+        name: '_checkOutDate',
+        type: 'uint256',
+      },
+    ],
+    name: 'makeReservation',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [],
+    name: 'reservationCount',
+    outputs: [
+      {
+        internalType: 'uint256',
+        name: '',
+        type: 'uint256',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'uint256',
+        name: '',
+        type: 'uint256',
+      },
+    ],
+    name: 'reservations',
+    outputs: [
+      {
+        internalType: 'uint256',
+        name: 'id',
+        type: 'uint256',
+      },
+      {
+        internalType: 'uint256',
+        name: 'listingId',
+        type: 'uint256',
+      },
+      {
+        internalType: 'address',
+        name: 'guest',
+        type: 'address',
+      },
+      {
+        internalType: 'uint256',
+        name: 'checkInDate',
+        type: 'uint256',
+      },
+      {
+        internalType: 'uint256',
+        name: 'checkOutDate',
+        type: 'uint256',
+      },
+      {
+        internalType: 'uint256',
+        name: 'nights',
+        type: 'uint256',
+      },
+      {
+        internalType: 'uint256',
+        name: 'totalPrice',
+        type: 'uint256',
+      },
+      {
+        internalType: 'bool',
+        name: 'isCancelled',
         type: 'bool',
       },
     ],

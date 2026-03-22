@@ -490,14 +490,6 @@ onMounted(async () => {
               >
                 Otkaži kao gost
               </button>
-
-              <button
-                class="success-btn"
-                @click="handleHostPayout(reservation.id)"
-                v-if="reservation.status === '0'"
-              >
-                Isplati domaćinu
-              </button>
             </div>
           </div>
         </div>

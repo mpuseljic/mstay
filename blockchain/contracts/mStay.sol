@@ -82,6 +82,7 @@ contract mStay {
     ) public {
         require(_listingId > 0 && _listingId <= listingCount, "Listing does not exist");
         require(listings[_listingId].isActive, "Listing is not active");
+        require(listings[_listingId].host != msg.sender, "Host cannot reserve own listing");
         require(_checkOutDate > _checkInDate, "Invalid dates");
 
         uint256 nights = (_checkOutDate - _checkInDate) / 1 days;

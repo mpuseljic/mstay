@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import {
   connectWallet,
   getMStayContract,
@@ -30,6 +30,29 @@ const reservationForm = ref({
 
 const listings = ref([])
 const myReservations = ref([])
+
+const selectedListing = computed(() => {
+  return (
+    listings.value.find((listing) => listing.id === String(reservationForm.value.listingId)) || null
+  )
+})
+
+const reservationNights = computed(() => {
+  if (!reservationForm.value.checkIn || !reservationForm.value.checkOut) return 0
+
+  const checkIn = new Date(reservationForm.value.checkIn)
+  const checkOut = new Date(reservationForm.value.checkOut)
+
+  const diffMs = checkOut.getTime() - checkIn.getTime()
+  if (diffMs <= 0) return 0
+
+  return Math.floor(diffMs / (1000 * 60 * 60 * 24))
+})
+
+const reservationTotalPrice = computed(() => {
+  if (!selectedListing.value || reservationNights.value <= 0) return 0
+  return Number(selectedListing.value.pricePerNight) * reservationNights.value
+})
 
 function toUnixTimestamp(dateString) {
   return Math.floor(new Date(dateString).getTime() / 1000)
@@ -129,6 +152,22 @@ async function handleCreateListing() {
   }
 }
 
+function selectListingForReservation(listing) {
+  if (walletAddress.value && listing.host.toLowerCase() === walletAddress.value.toLowerCase()) {
+    errorMsg.value = 'Ne možeš rezervirati vlastiti oglas.'
+    successMsg.value = ''
+    return
+  }
+  reservationForm.value.listingId = listing.id
+  successMsg.value = `Odabran je oglas "${listing.title}" za rezervaciju.`
+  errorMsg.value = ''
+
+  const reservationSection = document.getElementById('reservation-section')
+  if (reservationSection) {
+    reservationSection.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+}
+
 async function handleReservation() {
   try {
     errorMsg.value = ''
@@ -150,6 +189,13 @@ async function handleReservation() {
 
     const checkInTs = toUnixTimestamp(reservationForm.value.checkIn)
     const checkOutTs = toUnixTimestamp(reservationForm.value.checkOut)
+
+    if (selectedListing.value && walletAddress.value) {
+      if (selectedListing.value.host.toLowerCase() === walletAddress.value.toLowerCase()) {
+        errorMsg.value = 'Ne možeš rezervirati vlastiti oglas.'
+        return
+      }
+    }
 
     isBooking.value = true
 
@@ -223,29 +269,6 @@ onMounted(async () => {
         </button>
       </div>
 
-      <div class="form-card">
-        <h2>Napravi rezervaciju</h2>
-
-        <div class="form-group">
-          <label>ID oglasa</label>
-          <input v-model="reservationForm.listingId" type="number" min="1" placeholder="Npr. 1" />
-        </div>
-
-        <div class="form-group">
-          <label>Check-in datum</label>
-          <input v-model="reservationForm.checkIn" type="date" />
-        </div>
-
-        <div class="form-group">
-          <label>Check-out datum</label>
-          <input v-model="reservationForm.checkOut" type="date" />
-        </div>
-
-        <button @click="handleReservation" :disabled="isBooking">
-          {{ isBooking ? 'Spremanje...' : 'Rezerviraj' }}
-        </button>
-      </div>
-
       <div class="listings-section">
         <h2>Popis oglasa</h2>
 
@@ -262,8 +285,67 @@ onMounted(async () => {
             <p><strong>Lokacija:</strong> {{ listing.location }}</p>
             <p><strong>Cijena/noć:</strong> {{ listing.pricePerNight }} ETH</p>
             <p><strong>Domaćin:</strong> {{ listing.host }}</p>
+
+            <button
+              class="reserve-btn"
+              @click="selectListingForReservation(listing)"
+              :disabled="
+                !listing.isActive ||
+                (walletAddress && listing.host.toLowerCase() === walletAddress.toLowerCase())
+              "
+            >
+              {{
+                walletAddress && listing.host.toLowerCase() === walletAddress.toLowerCase()
+                  ? 'Vlastiti oglas'
+                  : 'Rezerviraj'
+              }}
+            </button>
           </div>
         </div>
+      </div>
+
+      <div class="form-card">
+        <h2>Napravi rezervaciju</h2>
+
+        <p v-if="reservationForm.listingId" class="selected-listing-info">
+          Odabrani oglas ID: <strong>{{ reservationForm.listingId }}</strong>
+        </p>
+
+        <p v-if="selectedListing" class="selected-listing-info">
+          Odabrani oglas: <strong>{{ selectedListing.title }}</strong> —
+          {{ selectedListing.location }}
+        </p>
+
+        <div v-if="selectedListing && reservationNights > 0" class="reservation-preview">
+          <p><strong>Broj noćenja:</strong> {{ reservationNights }}</p>
+          <p><strong>Cijena po noći:</strong> {{ selectedListing.pricePerNight }} ETH</p>
+          <p><strong>Ukupna cijena:</strong> {{ reservationTotalPrice }} ETH</p>
+        </div>
+
+        <div class="form-group">
+          <label>ID oglasa</label>
+          <input
+            v-model="reservationForm.listingId"
+            type="number"
+            min="1"
+            placeholder="Odaberi oglas klikom na gumb Rezerviraj"
+            readonly
+          />
+        </div>
+
+        <div class="form-group">
+          <label>Check-in datum</label>
+          <input v-model="reservationForm.checkIn" type="date" />
+        </div>
+
+        <div class="form-group">
+          <label>Check-out datum</label>
+          <input v-model="reservationForm.checkOut" type="date" />
+        </div>
+
+        <button @click="handleReservation" :disabled="isBooking">
+          {{ isBooking ? 'Spremanje...' : 'Rezerviraj' }}
+        </button>
       </div>
 
       <div class="listings-section">
@@ -416,6 +498,34 @@ input {
   margin: 0;
 }
 
+.selected-listing-info {
+  margin-top: -4px;
+  margin-bottom: 16px;
+  color: #374151;
+  font-size: 14px;
+}
+
+.reservation-preview {
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+}
+
+.reservation-preview p {
+  margin: 6px 0;
+}
+
+.reserve-btn {
+  width: 100%;
+  margin-top: 12px;
+  background: #2563eb;
+}
+
+.reserve-btn:hover {
+  opacity: 0.95;
+}
 .success {
   color: #166534;
   margin-top: 16px;

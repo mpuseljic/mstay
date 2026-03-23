@@ -2,8 +2,9 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import AppNavbar from '../components/layout/AppNavbar.vue'
-import { useMstay } from '../composables/useMstay.js'
-import AppFooter from '@/components/layout/AppFooter.vue'
+import AppFooter from '../components/layout/AppFooter.vue'
+import { useMstay } from '../composables/useMstay'
+import { uploadImageToPinata } from '../services/upload'
 
 const router = useRouter()
 
@@ -18,30 +19,51 @@ const {
 } = useMstay()
 
 const isSubmitting = ref(false)
+const isUploading = ref(false)
 
 const form = ref({
   title: '',
   location: '',
-  imageUrl: '',
   pricePerNight: '',
 })
+
+const selectedFile = ref(null)
+const previewUrl = ref('')
+
+function handleFileChange(event) {
+  const file = event.target.files?.[0] || null
+  selectedFile.value = file
+
+  if (file) {
+    previewUrl.value = URL.createObjectURL(file)
+  } else {
+    previewUrl.value = ''
+  }
+}
 
 async function handleSubmit() {
   try {
     if (
       !form.value.title ||
       !form.value.location ||
-      !form.value.imageUrl ||
-      !form.value.pricePerNight
-    )
+      !form.value.pricePerNight ||
+      !selectedFile.value
+    ) {
       return
+    }
 
     isSubmitting.value = true
+    isUploading.value = true
+
+    const uploadResult = await uploadImageToPinata(selectedFile.value)
+    const imageUrl = uploadResult.ipfsUrl
+
+    isUploading.value = false
 
     await createListing(
       form.value.title,
       form.value.location,
-      form.value.imageUrl,
+      imageUrl,
       Number(form.value.pricePerNight),
     )
 
@@ -49,8 +71,11 @@ async function handleSubmit() {
     await loadListingCount()
 
     router.push('/listings')
+  } catch (error) {
+    console.error(error)
   } finally {
     isSubmitting.value = false
+    isUploading.value = false
   }
 }
 </script>
@@ -83,12 +108,15 @@ async function handleSubmit() {
           </div>
 
           <div class="form-group form-group--full">
-            <label>Image URL</label>
-            <input
-              v-model="form.imageUrl"
-              type="text"
-              placeholder="https://images.unsplash.com/..."
-            />
+            <label>Fotografija oglasa</label>
+            <input type="file" accept="image/*" @change="handleFileChange" />
+          </div>
+
+          <div v-if="previewUrl" class="form-group form-group--full">
+            <label>Preview</label>
+            <div class="image-preview-wrap">
+              <img :src="previewUrl" alt="Preview slike" class="image-preview" />
+            </div>
           </div>
 
           <div class="form-group form-group--full">
@@ -103,12 +131,19 @@ async function handleSubmit() {
           </div>
         </div>
 
-        <button class="submit-btn" @click="handleSubmit" :disabled="isSubmitting">
-          {{ isSubmitting ? 'Objavljujem oglas...' : 'Objavi oglas' }}
+        <button class="submit-btn" @click="handleSubmit" :disabled="isSubmitting || isUploading">
+          {{
+            isUploading
+              ? 'Uploadam sliku...'
+              : isSubmitting
+                ? 'Objavljujem oglas...'
+                : 'Objavi oglas'
+          }}
         </button>
       </section>
-      <AppFooter />
     </main>
+
+    <AppFooter />
   </div>
 </template>
 
@@ -164,6 +199,20 @@ input {
   border: 1px solid #dddddd;
   border-radius: 16px;
   padding: 14px 16px;
+}
+
+.image-preview-wrap {
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  overflow: hidden;
+  background: #f3f4f6;
+}
+
+.image-preview {
+  width: 100%;
+  max-height: 360px;
+  object-fit: cover;
+  display: block;
 }
 
 .submit-btn {

@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 import AppNavbar from '../components/layout/AppNavbar.vue'
 import AppFooter from '../components/layout/AppFooter.vue'
 import { useMstay } from '../composables/useMstay'
-import { uploadImageToPinata } from '../services/upload'
+import { uploadMultipleImagesToPinata } from '../services/upload'
 
 const router = useRouter()
 
@@ -27,18 +27,14 @@ const form = ref({
   pricePerNight: '',
 })
 
-const selectedFile = ref(null)
-const previewUrl = ref('')
+const selectedFiles = ref(null)
+const previewUrls = ref('')
 
 function handleFileChange(event) {
-  const file = event.target.files?.[0] || null
-  selectedFile.value = file
+  const files = Array.from(event.target.files || [])
+  selectedFiles.value = files
 
-  if (file) {
-    previewUrl.value = URL.createObjectURL(file)
-  } else {
-    previewUrl.value = ''
-  }
+  previewUrls.value = files.map((file) => URL.createObjectURL(file))
 }
 
 async function handleSubmit() {
@@ -47,7 +43,7 @@ async function handleSubmit() {
       !form.value.title ||
       !form.value.location ||
       !form.value.pricePerNight ||
-      !selectedFile.value
+      !selectedFiles.value
     ) {
       return
     }
@@ -55,15 +51,14 @@ async function handleSubmit() {
     isSubmitting.value = true
     isUploading.value = true
 
-    const uploadResult = await uploadImageToPinata(selectedFile.value)
-    const imageUrl = uploadResult.ipfsUrl
+    const imageUrls = await uploadMultipleImagesToPinata(selectedFiles.value)
 
     isUploading.value = false
 
     await createListing(
       form.value.title,
       form.value.location,
-      imageUrl,
+      imageUrls,
       Number(form.value.pricePerNight),
     )
 
@@ -109,13 +104,15 @@ async function handleSubmit() {
 
           <div class="form-group form-group--full">
             <label>Fotografija oglasa</label>
-            <input type="file" accept="image/*" @change="handleFileChange" />
+            <input type="file" accept="image/*" multiple @change="handleFileChange" />
           </div>
 
-          <div v-if="previewUrl" class="form-group form-group--full">
-            <label>Preview</label>
-            <div class="image-preview-wrap">
-              <img :src="previewUrl" alt="Preview slike" class="image-preview" />
+          <div v-if="previewUrls.length" class="form-group form-group--full">
+            <label>Preview fotografija</label>
+            <div class="multi-preview-grid">
+              <div v-for="(url, index) in previewUrls" :key="index" class="image-preview-wrap">
+                <img :src="url" alt="Preview slike" class="image-preview" />
+              </div>
             </div>
           </div>
 
@@ -215,6 +212,11 @@ input {
   display: block;
 }
 
+.multi-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
 .submit-btn {
   width: 100%;
   margin-top: 20px;

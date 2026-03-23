@@ -18,7 +18,7 @@ contract mStay {
         address host;
         string title;
         string location;
-        string imageUrl;
+        string[] imageUrls;
         uint256 pricePerNight;
         bool isActive;
     }
@@ -42,7 +42,7 @@ contract mStay {
         address indexed host,
         string title,
         string location,
-        string imageUrl,
+        string[] imageUrls,
         uint256 pricePerNight
     );
 
@@ -65,12 +65,12 @@ contract mStay {
     function createListing(
         string memory _title,
         string memory _location,
-        string memory _imageUrl,
+        string[] memory _imageUrls,
         uint256 _pricePerNight
     ) public {
         require(bytes(_title).length > 0, "Title is required");
         require(bytes(_location).length > 0, "Location is required");
-        require(bytes(_imageUrl).length > 0, "Image URL is required");
+        require(_imageUrls.length > 0, "At least one image is required");
         require(_pricePerNight > 0, "Price must be greater than 0");
 
         listingCount++;
@@ -80,7 +80,7 @@ contract mStay {
             host: msg.sender,
             title: _title,
             location: _location,
-            imageUrl: _imageUrl,
+            imageUrls: _imageUrls,
             pricePerNight: _pricePerNight,
             isActive: true
         });
@@ -90,7 +90,7 @@ contract mStay {
             msg.sender,
             _title,
             _location,
-            _imageUrl,
+            _imageUrls,
             _pricePerNight
         );
     }

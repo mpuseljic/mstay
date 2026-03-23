@@ -44,6 +44,16 @@ const isOwnListing = computed(() => {
   return listing.value.host.toLowerCase() === walletAddress.value.toLowerCase()
 })
 
+const mainImage = computed(() => {
+  if (!listing.value?.imageUrls?.length) return ''
+  return listing.value.imageUrls[0]
+})
+
+const galleryImages = computed(() => {
+  if (!listing.value?.imageUrls?.length) return []
+  return listing.value.imageUrls.slice(1)
+})
+
 function shortenAddress(address) {
   return `${address.slice(0, 6)}...${address.slice(-4)}`
 }
@@ -130,35 +140,25 @@ onMounted(async () => {
       <section v-if="successMsg" class="alert alert--success">{{ successMsg }}</section>
       <section v-if="errorMsg" class="alert alert--error">{{ errorMsg }}</section>
 
-      <section class="gallery">
+      <section class="gallery" v-if="listing.imageUrls?.length">
         <div class="gallery__main">
-          <img
-            v-if="listing.imageUrl"
-            :src="listing.imageUrl"
-            :alt="listing.title"
-            class="gallery__img"
-          />
+          <img v-if="mainImage" :src="mainImage" :alt="listing.title" class="gallery__img" />
           <div v-else class="gallery__main-placeholder">
             <span class="gallery__label">mStay Stay</span>
           </div>
         </div>
 
-        <div class="gallery__side">
-          <div class="gallery__mini">
-            <img
-              v-if="listing.imageUrl"
-              :src="listing.imageUrl"
-              :alt="listing.title"
-              class="gallery__mini-img"
-            />
+        <div class="gallery__side" v-if="galleryImages.length">
+          <div v-for="(image, index) in galleryImages" :key="index" class="gallery__mini">
+            <img :src="image" :alt="`${listing.title} ${index + 2}`" class="gallery__mini-img" />
           </div>
-          <div class="gallery__mini">
-            <img
-              v-if="listing.imageUrl"
-              :src="listing.imageUrl"
-              :alt="listing.title"
-              class="gallery__mini-img"
-            />
+        </div>
+      </section>
+
+      <section class="gallery" v-else>
+        <div class="gallery__main">
+          <div class="gallery__main-placeholder">
+            <span class="gallery__label">mStay Stay</span>
           </div>
         </div>
       </section>
@@ -355,8 +355,26 @@ onMounted(async () => {
   margin-bottom: 28px;
 }
 
-.gallery__main,
+.gallery__main {
+  min-height: 420px;
+  border-radius: 24px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+  background: #f3f4f6;
+}
+
+.gallery__side {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  max-height: 420px;
+  overflow: auto;
+}
+
 .gallery__mini {
+  min-height: 120px;
+  border-radius: 24px;
+  border: 1px solid var(--border);
   overflow: hidden;
   background: #f3f4f6;
 }
@@ -380,24 +398,11 @@ onMounted(async () => {
   padding: 20px;
 }
 
-.gallery__main {
-  min-height: 420px;
-  display: flex;
-  align-items: end;
-  padding: 20px;
-}
-
 .gallery__label {
   background: rgba(255, 255, 255, 0.95);
   border-radius: 999px;
   padding: 8px 12px;
   font-weight: 700;
-}
-
-.gallery__side {
-  display: grid;
-  grid-template-rows: 1fr 1fr;
-  gap: 16px;
 }
 
 .details-layout {
@@ -647,6 +652,12 @@ input {
   .booking-card {
     position: static;
   }
+
+  .gallery__side {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-height: none;
+    overflow: visible;
+  }
 }
 
 @media (max-width: 768px) {
@@ -660,7 +671,12 @@ input {
   }
 
   .info-grid,
-  .amenities {
+  .amenities,
+  .review-placeholder-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .gallery__side {
     grid-template-columns: 1fr;
   }
 }

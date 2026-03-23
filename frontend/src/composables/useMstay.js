@@ -56,7 +56,8 @@ async function loadListings() {
       host: item.host,
       title: item.title,
       location: item.location,
-      imageUrl: item.imageUrl,
+      imageUrls: item.imageUrls,
+      imageUrl: item.imageUrls?.[0] || '',
       pricePerNight: fromWeiToEth(item.pricePerNight),
       isActive: item.isActive,
     }))

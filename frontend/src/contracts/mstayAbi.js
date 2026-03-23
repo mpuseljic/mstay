@@ -28,9 +28,9 @@ export const MSTAY_ABI = [
       },
       {
         indexed: false,
-        internalType: 'string',
-        name: 'imageUrl',
-        type: 'string',
+        internalType: 'string[]',
+        name: 'imageUrls',
+        type: 'string[]',
       },
       {
         indexed: false,
@@ -240,9 +240,9 @@ export const MSTAY_ABI = [
         type: 'string',
       },
       {
-        internalType: 'string',
-        name: '_imageUrl',
-        type: 'string',
+        internalType: 'string[]',
+        name: '_imageUrls',
+        type: 'string[]',
       },
       {
         internalType: 'uint256',
@@ -282,9 +282,9 @@ export const MSTAY_ABI = [
             type: 'string',
           },
           {
-            internalType: 'string',
-            name: 'imageUrl',
-            type: 'string',
+            internalType: 'string[]',
+            name: 'imageUrls',
+            type: 'string[]',
           },
           {
             internalType: 'uint256',
@@ -393,9 +393,9 @@ export const MSTAY_ABI = [
             type: 'string',
           },
           {
-            internalType: 'string',
-            name: 'imageUrl',
-            type: 'string',
+            internalType: 'string[]',
+            name: 'imageUrls',
+            type: 'string[]',
           },
           {
             internalType: 'uint256',
@@ -579,11 +579,6 @@ export const MSTAY_ABI = [
       {
         internalType: 'string',
         name: 'location',
-        type: 'string',
-      },
-      {
-        internalType: 'string',
-        name: 'imageUrl',
         type: 'string',
       },
       {

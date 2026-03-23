@@ -1,17 +1,23 @@
-export async function uploadImageToPinata(file) {
-  const formData = new FormData()
-  formData.append('file', file)
+export async function uploadMultipleImagesToPinata(files) {
+  const uploaded = []
 
-  const response = await fetch('http://localhost:3001/api/upload-image', {
-    method: 'POST',
-    body: formData,
-  })
+  for (const file of files) {
+    const formData = new FormData()
+    formData.append('file', file)
 
-  const data = await response.json()
+    const response = await fetch('http://localhost:3001/api/upload-image', {
+      method: 'POST',
+      body: formData,
+    })
 
-  if (!response.ok) {
-    throw new Error(data.message || 'Greška pri uploadu slike.')
+    const data = await response.json()
+
+    if (!response.ok) {
+      throw new Error(data.message || 'Greška pri uploadu slike.')
+    }
+
+    uploaded.push(data.ipfsUrl)
   }
 
-  return data
+  return uploaded
 }

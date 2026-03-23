@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import AppNavbar from '../components/layout/AppNavbar.vue'
 import { useMstay } from '../composables/useMstay.js'
+import AppFooter from '@/components/layout/AppFooter.vue'
 
 const router = useRouter()
 
@@ -85,6 +86,7 @@ async function handleSubmit() {
           {{ isSubmitting ? 'Objavljujem oglas...' : 'Objavi oglas' }}
         </button>
       </section>
+      <AppFooter />
     </main>
   </div>
 </template>

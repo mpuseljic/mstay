@@ -3,6 +3,7 @@ import { onMounted } from 'vue'
 import AppNavbar from '../components/layout/AppNavbar.vue'
 import ReservationCard from '../components/reservations/ReservationCard.vue'
 import { useMstay } from '../composables/useMstay'
+import AppFooter from '@/components/layout/AppFooter.vue'
 
 const {
   walletAddress,
@@ -55,6 +56,7 @@ onMounted(async () => {
           @host-payout="handleHostPayout"
         />
       </section>
+      <AppFooter />
     </main>
   </div>
 </template>

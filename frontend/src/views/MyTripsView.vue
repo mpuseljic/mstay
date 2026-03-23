@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router'
 import AppNavbar from '../components/layout/AppNavbar.vue'
 import ReservationCard from '../components/reservations/ReservationCard.vue'
 import { useMstay } from '../composables/useMstay'
+import AppFooter from '@/components/layout/AppFooter.vue'
 
 const route = useRoute()
 
@@ -181,6 +182,7 @@ onMounted(async () => {
           </div>
         </section>
       </div>
+      <AppFooter />
     </main>
   </div>
 </template>

@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import AppNavbar from '../components/layout/AppNavbar.vue'
 import { useMstay } from '../composables/useMstay'
+import AppFooter from '@/components/layout/AppFooter.vue'
 
 const route = useRoute()
 
@@ -177,6 +178,34 @@ onMounted(async () => {
               <div class="amenity">MetaMask booking</div>
             </div>
           </div>
+
+          <div class="content-card">
+            <h2>Guest reviews</h2>
+            <p class="reviews-intro">
+              Reviews i reputacijski sustav bit će sljedeća nadogradnja platforme. Ovdje će se
+              prikazivati ocjene gosta i domaćina nakon završene rezervacije.
+            </p>
+
+            <div class="review-placeholder-grid">
+              <div class="review-placeholder">
+                <div class="review-top">
+                  <strong>5.0</strong>
+                  <span>Excellent stay</span>
+                </div>
+                <p>Clean UI, transparent on-chain booking i escrow payment flow.</p>
+              </div>
+
+              <div class="review-placeholder">
+                <div class="review-top">
+                  <strong>4.9</strong>
+                  <span>Great host experience</span>
+                </div>
+                <p>
+                  Host dashboard i payout logika pružaju dobar temelj za decentralizirani hosting.
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
 
         <aside class="booking-sidebar">
@@ -236,6 +265,7 @@ onMounted(async () => {
         <h1>Oglas nije pronađen</h1>
         <p>Provjeri ID oglasa ili se vrati na popis svih oglasa.</p>
       </section>
+      <AppFooter />
     </main>
   </div>
 </template>
@@ -512,6 +542,61 @@ input {
 .empty-page p {
   margin: 0;
   color: var(--muted);
+}
+.reviews-intro {
+  margin-bottom: 16px !important;
+}
+
+.review-placeholder-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.review-placeholder {
+  background: #fafafa;
+  border: 1px solid #f0f0f0;
+  border-radius: 18px;
+  padding: 16px;
+}
+
+.review-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.review-top strong {
+  font-size: 1.05rem;
+}
+
+.review-top span {
+  color: #374151;
+  font-weight: 600;
+}
+
+.review-placeholder p {
+  margin: 0;
+  color: #4b5563;
+  line-height: 1.65;
+}
+
+@media (max-width: 768px) {
+  .details-head {
+    flex-direction: column;
+    align-items: start;
+  }
+
+  .details-head h1 {
+    font-size: 2rem;
+  }
+
+  .info-grid,
+  .amenities,
+  .review-placeholder-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 1100px) {

@@ -4,6 +4,7 @@ import { RouterLink } from 'vue-router'
 import AppNavbar from '../components/layout/AppNavbar.vue'
 import ListingCard from '../components/listings/ListingCard.vue'
 import { useMstay } from '../composables/useMstay'
+import AppFooter from '@/components/layout/AppFooter.vue'
 
 const {
   walletAddress,
@@ -86,6 +87,7 @@ onMounted(async () => {
           @reserve="reserveFromHome"
         />
       </section>
+      <AppFooter />
     </main>
   </div>
 </template>

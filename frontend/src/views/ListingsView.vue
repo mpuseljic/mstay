@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import AppNavbar from '../components/layout/AppNavbar.vue'
 import ListingCard from '../components/listings/ListingCard.vue'
 import { useMstay } from '../composables/useMstay'
+import AppFooter from '@/components/layout/AppFooter.vue'
 
 const router = useRouter()
 
@@ -11,13 +12,25 @@ const { walletAddress, listings, successMsg, errorMsg, connectCurrentWallet, loa
   useMstay()
 
 const search = ref('')
+const filters = ref({
+  search: '',
+  maxPrice: '',
+  onlyActive: true,
+})
 
 const filteredListings = computed(() => {
-  const q = search.value.trim().toLowerCase()
-  if (!q) return listings.value
-
   return listings.value.filter((listing) => {
-    return listing.title.toLowerCase().includes(q) || listing.location.toLowerCase().includes(q)
+    const matchesSearch =
+      !filters.value.search ||
+      listing.title.toLowerCase().includes(filters.value.search.toLowerCase()) ||
+      listing.location.toLowerCase().includes(filters.value.search.toLowerCase())
+
+    const matchesPrice =
+      !filters.value.maxPrice || Number(listing.pricePerNight) <= Number(filters.value.maxPrice)
+
+    const matchesActive = !filters.value.onlyActive || listing.isActive
+
+    return matchesSearch && matchesPrice && matchesActive
   })
 })
 
@@ -38,19 +51,50 @@ onMounted(async () => {
       <section class="header-card">
         <div>
           <h1>Explore stays</h1>
-          <p>Pretraži sve oglase i rezerviraj smještaj koji ti odgovara.</p>
+          <p>Pretraži oglase po lokaciji, naslovu i cijeni.</p>
         </div>
+      </section>
 
-        <input
-          v-model="search"
-          class="search-input"
-          type="text"
-          placeholder="Pretraži po naslovu ili lokaciji"
-        />
+      <section class="filters-card">
+        <div class="filters-grid">
+          <div class="filter-group filter-group--wide">
+            <label>Pretraga</label>
+            <input
+              v-model="filters.search"
+              type="text"
+              placeholder="Npr. Pula, Arena, apartman..."
+            />
+          </div>
+
+          <div class="filter-group">
+            <label>Maks. cijena (ETH)</label>
+            <input
+              v-model="filters.maxPrice"
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="Npr. 0.5"
+            />
+          </div>
+
+          <div class="filter-toggle">
+            <label>
+              <input v-model="filters.onlyActive" type="checkbox" />
+              Samo aktivni oglasi
+            </label>
+          </div>
+        </div>
       </section>
 
       <section v-if="successMsg" class="alert alert--success">{{ successMsg }}</section>
       <section v-if="errorMsg" class="alert alert--error">{{ errorMsg }}</section>
+
+      <section class="results-head">
+        <div>
+          <h2>{{ filteredListings.length }} stays</h2>
+          <p>Rezultati filtrirani prema odabranim kriterijima.</p>
+        </div>
+      </section>
 
       <section class="listing-grid">
         <ListingCard
@@ -62,6 +106,8 @@ onMounted(async () => {
         />
       </section>
     </main>
+
+    <AppFooter />
   </div>
 </template>
 
@@ -73,16 +119,12 @@ onMounted(async () => {
 }
 
 .header-card {
-  display: flex;
-  justify-content: space-between;
-  gap: 18px;
-  align-items: center;
   background: white;
   border: 1px solid var(--border);
   border-radius: 24px;
   padding: 24px;
   box-shadow: var(--shadow);
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .header-card h1 {
@@ -94,12 +136,65 @@ onMounted(async () => {
   color: var(--muted);
 }
 
-.search-input {
-  width: 360px;
-  max-width: 100%;
+.filters-card {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 20px;
+  box-shadow: var(--shadow);
+  margin-bottom: 22px;
+}
+
+.filters-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 16px;
+  align-items: end;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.filter-group--wide {
+  min-width: 0;
+}
+
+.filter-group label,
+.filter-toggle label {
+  font-weight: 700;
+  color: #374151;
+}
+
+.filter-group input {
   border: 1px solid #dddddd;
   border-radius: 16px;
   padding: 14px 16px;
+}
+
+.filter-toggle {
+  display: flex;
+  align-items: center;
+  min-height: 48px;
+}
+
+.filter-toggle input {
+  margin-right: 8px;
+}
+
+.results-head {
+  margin-bottom: 18px;
+}
+
+.results-head h2 {
+  margin: 0 0 6px;
+}
+
+.results-head p {
+  margin: 0;
+  color: var(--muted);
 }
 
 .listing-grid {
@@ -128,21 +223,18 @@ onMounted(async () => {
 }
 
 @media (max-width: 1100px) {
+  .filters-grid,
   .listing-grid {
     grid-template-columns: 1fr 1fr;
   }
 
-  .header-card {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .search-input {
-    width: 100%;
+  .filter-group--wide {
+    grid-column: 1 / -1;
   }
 }
 
 @media (max-width: 700px) {
+  .filters-grid,
   .listing-grid {
     grid-template-columns: 1fr;
   }

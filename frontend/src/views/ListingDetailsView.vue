@@ -132,11 +132,34 @@ onMounted(async () => {
 
       <section class="gallery">
         <div class="gallery__main">
-          <span class="gallery__label">mStay Stay</span>
+          <img
+            v-if="listing.imageUrl"
+            :src="listing.imageUrl"
+            :alt="listing.title"
+            class="gallery__img"
+          />
+          <div v-else class="gallery__main-placeholder">
+            <span class="gallery__label">mStay Stay</span>
+          </div>
         </div>
+
         <div class="gallery__side">
-          <div class="gallery__mini"></div>
-          <div class="gallery__mini"></div>
+          <div class="gallery__mini">
+            <img
+              v-if="listing.imageUrl"
+              :src="listing.imageUrl"
+              :alt="listing.title"
+              class="gallery__mini-img"
+            />
+          </div>
+          <div class="gallery__mini">
+            <img
+              v-if="listing.imageUrl"
+              :src="listing.imageUrl"
+              :alt="listing.title"
+              class="gallery__mini-img"
+            />
+          </div>
         </div>
       </section>
 
@@ -334,11 +357,27 @@ onMounted(async () => {
 
 .gallery__main,
 .gallery__mini {
+  overflow: hidden;
+  background: #f3f4f6;
+}
+
+.gallery__img,
+.gallery__mini-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.gallery__main-placeholder {
+  width: 100%;
+  height: 100%;
   background:
     linear-gradient(135deg, rgba(255, 56, 92, 0.16), rgba(255, 56, 92, 0.04)),
     linear-gradient(135deg, #f9fafb, #f3f4f6);
-  border-radius: 24px;
-  border: 1px solid var(--border);
+  display: flex;
+  align-items: end;
+  padding: 20px;
 }
 
 .gallery__main {

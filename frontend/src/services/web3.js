@@ -38,11 +38,11 @@ export async function getMStayContract(withSigner = false) {
   return new Contract(MSTAY_CONTRACT_ADDRESS, MSTAY_ABI, provider)
 }
 
-export async function createListing(title, location, pricePerNight) {
+export async function createListing(title, location, imageUrl, pricePerNight) {
   const contract = await getMStayContract(true)
   const priceInWei = parseEther(pricePerNight.toString())
 
-  const tx = await contract.createListing(title, location, priceInWei)
+  const tx = await contract.createListing(title, location, imageUrl, priceInWei)
   await tx.wait()
   return tx
 }

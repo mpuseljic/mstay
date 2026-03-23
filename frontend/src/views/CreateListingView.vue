@@ -22,16 +22,28 @@ const isSubmitting = ref(false)
 const form = ref({
   title: '',
   location: '',
+  imageUrl: '',
   pricePerNight: '',
 })
 
 async function handleSubmit() {
   try {
-    if (!form.value.title || !form.value.location || !form.value.pricePerNight) return
+    if (
+      !form.value.title ||
+      !form.value.location ||
+      !form.value.imageUrl ||
+      !form.value.pricePerNight
+    )
+      return
 
     isSubmitting.value = true
 
-    await createListing(form.value.title, form.value.location, Number(form.value.pricePerNight))
+    await createListing(
+      form.value.title,
+      form.value.location,
+      form.value.imageUrl,
+      Number(form.value.pricePerNight),
+    )
 
     await loadListings()
     await loadListingCount()
@@ -68,6 +80,15 @@ async function handleSubmit() {
           <div class="form-group">
             <label>Lokacija</label>
             <input v-model="form.location" type="text" placeholder="Npr. Pula" />
+          </div>
+
+          <div class="form-group form-group--full">
+            <label>Image URL</label>
+            <input
+              v-model="form.imageUrl"
+              type="text"
+              placeholder="https://images.unsplash.com/..."
+            />
           </div>
 
           <div class="form-group form-group--full">

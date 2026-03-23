@@ -34,7 +34,16 @@ function shortenAddress(address) {
 <template>
   <article class="card">
     <div class="card__image" @click="openDetails">
-      <span class="card__image-badge">mStay</span>
+      <img
+        v-if="listing.imageUrl"
+        :src="listing.imageUrl"
+        ,
+        :alt="listing.title"
+        class="card__img"
+      />
+      <div v-else class="card__placeholder">
+        <span class="card__image-badge">mStay</span>
+      </div>
     </div>
 
     <div class="card__body">
@@ -83,7 +92,22 @@ function shortenAddress(address) {
 }
 
 .card__image {
+  cursor: pointer;
   height: 210px;
+  overflow: hidden;
+  background: #f3f4f6;
+}
+
+.card__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.card__placeholder {
+  width: 100%;
+  height: 100%;
   background:
     linear-gradient(135deg, rgba(255, 56, 92, 0.16), rgba(255, 56, 92, 0.04)),
     linear-gradient(135deg, #f9fafb, #f3f4f6);
@@ -98,10 +122,6 @@ function shortenAddress(address) {
   padding: 8px 12px;
   font-size: 0.82rem;
   font-weight: 700;
-}
-
-.card__image {
-  cursor: pointer;
 }
 
 .clickable-title {

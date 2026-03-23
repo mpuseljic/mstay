@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, onBeforeUnmount } from 'vue'
 import { useRoute } from 'vue-router'
 import AppNavbar from '../components/layout/AppNavbar.vue'
 import { useMstay } from '../composables/useMstay'
@@ -147,6 +147,26 @@ function showNextImage() {
   if (!allImages.value.length) return
   activeImageIndex.value = (activeImageIndex.value + 1) % allImages.value.length
 }
+
+function handleKeydown(event) {
+  if (!isLightboxOpen.value) return
+
+  if (event.key === 'Escape') {
+    closeLightbox()
+  } else if (event.key === 'ArrowLeft') {
+    showPrevImage()
+  } else if (event.key === 'ArrowRight') {
+    showNextImage()
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', handleKeydown)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', handleKeydown)
+})
 
 watch(
   () => listing.value,

@@ -106,3 +106,8 @@ export async function releasePayout(reservationId) {
 export function fromWeiToEth(value) {
   return formatEther(value)
 }
+
+export async function checkDateAvailability(listingId, checkInDate, checkOutDate) {
+  const contract = await getMStayContract(false)
+  return await contract.isDateRangeAvailable(listingId, checkInDate, checkOutDate)
+}

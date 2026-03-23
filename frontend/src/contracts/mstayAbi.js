@@ -539,6 +539,35 @@ export const MSTAY_ABI = [
     type: 'function',
   },
   {
+    inputs: [
+      {
+        internalType: 'uint256',
+        name: '_listingId',
+        type: 'uint256',
+      },
+      {
+        internalType: 'uint256',
+        name: '_checkInDate',
+        type: 'uint256',
+      },
+      {
+        internalType: 'uint256',
+        name: '_checkOutDate',
+        type: 'uint256',
+      },
+    ],
+    name: 'isDateRangeAvailable',
+    outputs: [
+      {
+        internalType: 'bool',
+        name: '',
+        type: 'bool',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
     inputs: [],
     name: 'listingCount',
     outputs: [

@@ -16,6 +16,7 @@ const {
   loadListings,
   makeReservation,
   calculateReservationPrice,
+  checkDateAvailability,
 } = useMstay()
 
 const listing = ref(null)
@@ -24,6 +25,8 @@ const isLightboxOpen = ref(false)
 const activeImageIndex = ref(0)
 const isBooking = ref(false)
 const reservationPricePreview = ref('0')
+const bookingError = ref('')
+const bookingSuccess = ref('')
 
 const reservationForm = ref({
   checkIn: '',
@@ -104,13 +107,27 @@ async function updateReservationPreview() {
 async function handleReservation() {
   if (!walletAddress.value || !listing.value) return
 
+  bookingError.value = ''
+  bookingSuccess.value = ''
+
   const checkInTs = toUnixTimestamp(reservationForm.value.checkIn)
   const checkOutTs = toUnixTimestamp(reservationForm.value.checkOut)
 
   try {
     isBooking.value = true
 
+    const isAvailable = await checkDateAvailability(Number(listing.value.id), checkInTs, checkOutTs)
+
+    if (!isAvailable) {
+      bookingError.value = 'Odabrani datumi nisu dostupni za ovaj smještaj. Odaberi drugi termin.'
+      bookingSuccess.value = ''
+      return
+    }
+
     await makeReservation(Number(listing.value.id), checkInTs, checkOutTs)
+
+    bookingSuccess.value = 'Rezervacija je uspješno kreirana.'
+    bookingError.value = ''
 
     reservationForm.value.checkIn = ''
     reservationForm.value.checkOut = ''
@@ -368,6 +385,14 @@ onMounted(async () => {
                 <span>Ukupna cijena</span>
                 <strong>{{ reservationPricePreview }} ETH</strong>
               </div>
+            </div>
+
+            <div v-if="bookingError" class="booking-message booking-message--error">
+              {{ bookingError }}
+            </div>
+
+            <div v-if="bookingSuccess" class="booking-message booking-message--success">
+              {{ bookingSuccess }}
             </div>
 
             <button
@@ -820,6 +845,27 @@ input {
   margin: 0;
   color: #4b5563;
   line-height: 1.65;
+}
+
+.booking-message {
+  border-radius: 14px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  font-size: 0.94rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.booking-message--error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+}
+
+.booking-message--success {
+  background: #ecfdf3;
+  border: 1px solid #bbf7d0;
+  color: #166534;
 }
 
 @media (max-width: 768px) {

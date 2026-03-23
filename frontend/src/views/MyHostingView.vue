@@ -1,9 +1,10 @@
 <script setup>
-import { onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
+import { RouterLink } from 'vue-router'
 import AppNavbar from '../components/layout/AppNavbar.vue'
+import AppFooter from '../components/layout/AppFooter.vue'
 import ReservationCard from '../components/reservations/ReservationCard.vue'
 import { useMstay } from '../composables/useMstay'
-import AppFooter from '@/components/layout/AppFooter.vue'
 
 const {
   walletAddress,
@@ -15,6 +16,16 @@ const {
   cancelReservationByHost,
   releasePayout,
 } = useMstay()
+
+const activeHostingReservations = computed(() => {
+  return hostReservations.value.filter((reservation) => reservation.status === '0').length
+})
+
+const closedHostingReservations = computed(() => {
+  return hostReservations.value.filter((reservation) =>
+    ['1', '2', '3', '4'].includes(reservation.status),
+  ).length
+})
 
 async function handleHostCancel(id) {
   await cancelReservationByHost(Number(id))
@@ -38,15 +49,57 @@ onMounted(async () => {
     <AppNavbar :wallet-address="walletAddress" @connect="connectCurrentWallet" />
 
     <main class="page">
-      <section class="head">
-        <h1>Hosting dashboard</h1>
-        <p>Upravljaj rezervacijama koje su napravljene za tvoje oglase.</p>
+      <section class="hero">
+        <div class="hero__copy">
+          <span class="eyebrow">Host dashboard</span>
+          <h1>My Hosting</h1>
+          <p>
+            Ovdje upravljaš rezervacijama za svoje oglase, otkazivanjima i isplatama escrow
+            sredstava nakon početka boravka.
+          </p>
+        </div>
+
+        <div class="hero__stats">
+          <div class="stat-card">
+            <span class="stat-label">Aktivne host rezervacije</span>
+            <strong class="stat-value">{{ activeHostingReservations }}</strong>
+          </div>
+
+          <div class="stat-card">
+            <span class="stat-label">Zatvorene / obrađene</span>
+            <strong class="stat-value">{{ closedHostingReservations }}</strong>
+          </div>
+        </div>
       </section>
 
-      <section v-if="successMsg" class="alert alert--success">{{ successMsg }}</section>
-      <section v-if="errorMsg" class="alert alert--error">{{ errorMsg }}</section>
+      <section v-if="successMsg" class="alert alert--success">
+        {{ successMsg }}
+      </section>
 
-      <section class="reservation-grid">
+      <section v-if="errorMsg" class="alert alert--error">
+        {{ errorMsg }}
+      </section>
+
+      <section class="section-head">
+        <div>
+          <h2>Reservations for your stays</h2>
+          <p>Pregled svih rezervacija koje su gosti napravili za tvoje oglase.</p>
+        </div>
+
+        <RouterLink to="/create-listing" class="explore-btn"> Dodaj novi oglas </RouterLink>
+      </section>
+
+      <section v-if="hostReservations.length === 0" class="empty-state">
+        <div class="empty-state__icon">🏠</div>
+        <h3>Još nema rezervacija za tvoje oglase</h3>
+        <p>
+          Kada gost rezervira jedan od tvojih oglasa, ovdje ćeš vidjeti sve detalje, uključujući
+          status rezervacije, mogućnost otkazivanja i isplate sredstava.
+        </p>
+        <RouterLink to="/create-listing" class="primary-link-btn"> Objavi novi oglas </RouterLink>
+      </section>
+
+      <section v-else class="reservation-grid">
         <ReservationCard
           v-for="reservation in hostReservations"
           :key="reservation.id"
@@ -56,8 +109,9 @@ onMounted(async () => {
           @host-payout="handleHostPayout"
         />
       </section>
-      <AppFooter />
     </main>
+
+    <AppFooter />
   </div>
 </template>
 
@@ -68,23 +122,142 @@ onMounted(async () => {
   padding: 32px 24px 56px;
 }
 
-.head {
-  margin-bottom: 20px;
+.hero {
+  display: grid;
+  grid-template-columns: 1.2fr 0.9fr;
+  gap: 22px;
+  background: linear-gradient(135deg, #ffffff, #f9fafb);
+  border: 1px solid var(--border);
+  border-radius: 28px;
+  padding: 32px;
+  margin-bottom: 24px;
+  box-shadow: var(--shadow);
 }
 
-.head h1 {
+.eyebrow {
+  display: inline-block;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #4338ca;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.hero__copy h1 {
+  margin: 0 0 10px;
+  font-size: 2.4rem;
+}
+
+.hero__copy p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.7;
+  max-width: 680px;
+}
+
+.hero__stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.stat-card {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  padding: 18px;
+  box-shadow: 0 10px 24px rgba(17, 24, 39, 0.04);
+}
+
+.stat-label {
+  display: block;
+  font-size: 0.88rem;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.stat-value {
+  font-size: 1.8rem;
+  font-weight: 800;
+}
+
+.section-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.section-head h2 {
   margin: 0 0 6px;
 }
 
-.head p {
+.section-head p {
   margin: 0;
   color: var(--muted);
+}
+
+.explore-btn,
+.primary-link-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16px;
+  padding: 13px 18px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.explore-btn {
+  background: white;
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.primary-link-btn {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: white;
 }
 
 .reservation-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18px;
+}
+
+.empty-state {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 28px;
+  padding: 44px 28px;
+  text-align: center;
+  box-shadow: var(--shadow);
+}
+
+.empty-state__icon {
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 16px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #fff1f3;
+  font-size: 1.8rem;
+}
+
+.empty-state h3 {
+  margin: 0 0 10px;
+  font-size: 1.4rem;
+}
+
+.empty-state p {
+  max-width: 560px;
+  margin: 0 auto 20px;
+  color: var(--muted);
+  line-height: 1.7;
 }
 
 .alert {
@@ -106,8 +279,32 @@ onMounted(async () => {
   color: #b91c1c;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1100px) {
+  .hero,
   .reservation-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .section-head {
+    flex-direction: column;
+    align-items: start;
+  }
+}
+
+@media (max-width: 700px) {
+  .page {
+    padding: 24px 14px 42px;
+  }
+
+  .hero {
+    padding: 24px;
+  }
+
+  .hero__copy h1 {
+    font-size: 2rem;
+  }
+
+  .hero__stats {
     grid-template-columns: 1fr;
   }
 }

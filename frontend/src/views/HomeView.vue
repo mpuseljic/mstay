@@ -1,10 +1,10 @@
 <script setup>
-import { onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import AppNavbar from '../components/layout/AppNavbar.vue'
+import AppFooter from '../components/layout/AppFooter.vue'
 import ListingCard from '../components/listings/ListingCard.vue'
 import { useMstay } from '../composables/useMstay'
-import AppFooter from '@/components/layout/AppFooter.vue'
 
 const {
   walletAddress,
@@ -17,8 +17,23 @@ const {
   loadListingCount,
 } = useMstay()
 
-function reserveFromHome() {
-  window.location.href = '/listings'
+const featuredListings = computed(() => {
+  return listings.value.slice(0, 6)
+})
+
+const activeListingsCount = computed(() => {
+  return listings.value.filter((listing) => listing.isActive).length
+})
+
+const uniqueLocationsCount = computed(() => {
+  const locations = new Set(
+    listings.value.map((listing) => listing.location?.trim()).filter(Boolean),
+  )
+  return locations.size
+})
+
+function handleReserve(listing) {
+  window.location.href = `/listings/${listing.id}`
 }
 
 onMounted(async () => {
@@ -33,62 +48,188 @@ onMounted(async () => {
 
     <main class="page">
       <section class="hero">
-        <div class="hero__copy">
-          <span class="eyebrow">Airbnb-inspired Web3 booking</span>
-          <h1>Find unique stays and book them on-chain.</h1>
+        <div class="hero__content">
+          <span class="eyebrow">Decentralized travel, elevated</span>
+          <h1>Book beautiful stays with on-chain trust.</h1>
           <p>
-            mStay je decentralizirana aplikacija za objavu smještaja, rezervacije, escrow plaćanja i
-            hosting dashboard.
+            mStay spaja moderan booking doživljaj sa smart contract escrow logikom, MetaMask
+            prijavom i transparentnim rezervacijama na blockchainu.
           </p>
 
           <div class="hero__actions">
-            <RouterLink to="/listings" class="btn btn--primary">Explore stays</RouterLink>
-            <RouterLink to="/create-listing" class="btn btn--secondary">Become a host</RouterLink>
+            <RouterLink to="/listings" class="btn btn--primary"> Explore stays </RouterLink>
+            <RouterLink to="/create-listing" class="btn btn--secondary"> Start hosting </RouterLink>
+          </div>
+
+          <div class="hero__chips">
+            <span class="chip">Escrow payments</span>
+            <span class="chip">MetaMask login</span>
+            <span class="chip">On-chain reservations</span>
           </div>
         </div>
 
-        <div class="hero__stats">
-          <div class="stat">
-            <span>Ukupno oglasa</span>
-            <strong>{{ listingCount || '0' }}</strong>
+        <div class="hero__visual">
+          <div class="hero-card hero-card--large">
+            <div class="hero-card__label">Featured stay</div>
+            <div class="hero-card__body">
+              <strong>Modern apartments</strong>
+              <span>Secure booking flow with blockchain settlement</span>
+            </div>
           </div>
-          <div class="stat">
-            <span>Blockchain</span>
-            <strong>Ethereum</strong>
-          </div>
-          <div class="stat">
-            <span>Plaćanje</span>
-            <strong>Escrow</strong>
-          </div>
-          <div class="stat">
-            <span>Wallet</span>
-            <strong>{{ walletAddress ? 'Connected' : 'Not connected' }}</strong>
+
+          <div class="hero-mini-grid">
+            <div class="hero-card hero-card--mini">
+              <span class="mini-title">Active stays</span>
+              <strong>{{ activeListingsCount }}</strong>
+            </div>
+            <div class="hero-card hero-card--mini">
+              <span class="mini-title">Locations</span>
+              <strong>{{ uniqueLocationsCount }}</strong>
+            </div>
           </div>
         </div>
       </section>
 
-      <section v-if="successMsg" class="alert alert--success">{{ successMsg }}</section>
-      <section v-if="errorMsg" class="alert alert--error">{{ errorMsg }}</section>
+      <section v-if="successMsg" class="alert alert--success">
+        {{ successMsg }}
+      </section>
+
+      <section v-if="errorMsg" class="alert alert--error">
+        {{ errorMsg }}
+      </section>
+
+      <section class="stats-strip">
+        <div class="stat-box">
+          <span class="stat-box__label">Total listings</span>
+          <strong class="stat-box__value">{{ listingCount || '0' }}</strong>
+        </div>
+
+        <div class="stat-box">
+          <span class="stat-box__label">Active listings</span>
+          <strong class="stat-box__value">{{ activeListingsCount }}</strong>
+        </div>
+
+        <div class="stat-box">
+          <span class="stat-box__label">Supported locations</span>
+          <strong class="stat-box__value">{{ uniqueLocationsCount }}</strong>
+        </div>
+
+        <div class="stat-box">
+          <span class="stat-box__label">Wallet status</span>
+          <strong class="stat-box__value">
+            {{ walletAddress ? 'Connected' : 'Not connected' }}
+          </strong>
+        </div>
+      </section>
 
       <section class="section-head">
         <div>
-          <h2>Featured stays</h2>
-          <p>Pregled najnovijih oglasa na platformi.</p>
+          <span class="section-kicker">Featured listings</span>
+          <h2>Discover unique stays</h2>
+          <p>Odabrani oglasi koji trenutno definiraju mStay iskustvo.</p>
         </div>
-        <RouterLink to="/listings" class="link-btn">View all</RouterLink>
+
+        <RouterLink to="/listings" class="link-btn"> View all listings </RouterLink>
       </section>
 
-      <section class="listing-grid">
+      <section v-if="featuredListings.length" class="listing-grid">
         <ListingCard
-          v-for="listing in listings.slice(0, 3)"
+          v-for="listing in featuredListings"
           :key="listing.id"
           :listing="listing"
           :wallet-address="walletAddress"
-          @reserve="reserveFromHome"
+          @reserve="handleReserve"
         />
       </section>
-      <AppFooter />
+
+      <section v-else class="empty-hero">
+        <div class="empty-hero__icon">✦</div>
+        <h3>No featured stays yet</h3>
+        <p>Objavi prvi oglas i započni stvarati decentralizirano booking iskustvo.</p>
+        <RouterLink to="/create-listing" class="btn btn--primary">
+          Create first listing
+        </RouterLink>
+      </section>
+
+      <section class="info-grid">
+        <article class="info-card">
+          <span class="section-kicker">How it works</span>
+          <h3>Book with escrow protection</h3>
+          <p>
+            Gost rezervira smještaj, sredstva se zaključavaju u escrowu, a domaćin ih dobiva tek
+            nakon što rezervacija postane valjana za isplatu.
+          </p>
+        </article>
+
+        <article class="info-card">
+          <span class="section-kicker">Host smarter</span>
+          <h3>Manage reservations on-chain</h3>
+          <p>
+            Domaćini mogu pratiti rezervacije, otkazati ih kada je potrebno i upravljati isplatama
+            unutar vlastitog hosting dashboarda.
+          </p>
+        </article>
+
+        <article class="info-card">
+          <span class="section-kicker">Transparent flow</span>
+          <h3>Every action is verifiable</h3>
+          <p>
+            Rezervacije, statusi i isplate temelje se na pametnim ugovorima, što daje veću
+            transparentnost i povjerenje između korisnika.
+          </p>
+        </article>
+      </section>
+
+      <section class="hosting-banner">
+        <div class="hosting-banner__copy">
+          <span class="section-kicker">For hosts</span>
+          <h2>Turn your stay into an on-chain experience.</h2>
+          <p>
+            Kreiraj listing, dodaj fotografije, upravljaj rezervacijama i koristi escrow isplate kao
+            moderan model digitalnog hostinga.
+          </p>
+        </div>
+
+        <div class="hosting-banner__actions">
+          <RouterLink to="/create-listing" class="btn btn--primary"> Add a new listing </RouterLink>
+          <RouterLink to="/my-hosting" class="btn btn--secondary">
+            Open hosting dashboard
+          </RouterLink>
+        </div>
+      </section>
+
+      <section class="section-head section-head--compact">
+        <div>
+          <span class="section-kicker">Why mStay</span>
+          <h2>Built for modern Web3 hospitality</h2>
+        </div>
+      </section>
+
+      <section class="benefits-grid">
+        <div class="benefit-card">
+          <div class="benefit-icon">🔐</div>
+          <h3>Secure by design</h3>
+          <p>Escrow rezervacije smanjuju rizik i podižu povjerenje između gosta i domaćina.</p>
+        </div>
+
+        <div class="benefit-card">
+          <div class="benefit-icon">⚡</div>
+          <h3>Fast booking flow</h3>
+          <p>Jednostavan UX povezan s MetaMaskom omogućuje brz i jasan proces rezervacije.</p>
+        </div>
+
+        <div class="benefit-card">
+          <div class="benefit-icon">🧾</div>
+          <h3>Transparent history</h3>
+          <p>
+            Sve ključne akcije vezane uz rezervacije i isplate mogu se pratiti kroz blockchain
+            logiku.
+          </p>
+        </div>
+      </section>
     </main>
+
+    <AppFooter />
   </div>
 </template>
 
@@ -102,18 +243,26 @@ onMounted(async () => {
 .hero {
   display: grid;
   grid-template-columns: 1.2fr 0.9fr;
-  gap: 22px;
-  padding: 32px;
-  border-radius: 28px;
+  gap: 24px;
   background: linear-gradient(135deg, #ffffff, #fff7f8);
   border: 1px solid var(--border);
+  border-radius: 32px;
+  padding: 36px;
   box-shadow: var(--shadow);
-  margin-bottom: 28px;
+  margin-bottom: 26px;
 }
 
-.eyebrow {
-  display: inline-block;
-  margin-bottom: 14px;
+.hero__content {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.eyebrow,
+.section-kicker {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
   padding: 8px 12px;
   border-radius: 999px;
   background: #fff0f3;
@@ -122,60 +271,162 @@ onMounted(async () => {
   font-weight: 700;
 }
 
-.hero__copy h1 {
-  margin: 0 0 12px;
-  font-size: 3rem;
-  line-height: 1.05;
+.hero__content h1 {
+  margin: 16px 0 14px;
+  font-size: 3.2rem;
+  line-height: 1.02;
+  letter-spacing: -0.03em;
+  max-width: 720px;
 }
 
-.hero__copy p {
+.hero__content p {
   margin: 0;
   color: var(--muted);
-  line-height: 1.7;
-  max-width: 660px;
+  line-height: 1.8;
+  max-width: 720px;
+  font-size: 1.02rem;
 }
 
 .hero__actions {
   display: flex;
   gap: 12px;
-  margin-top: 24px;
   flex-wrap: wrap;
+  margin-top: 24px;
 }
 
-.hero__stats {
+.hero__chips {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 22px;
+}
+
+.chip {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 10px 14px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.hero__visual {
+  display: grid;
+  grid-template-rows: 1fr auto;
+  gap: 16px;
+}
+
+.hero-card {
+  background:
+    linear-gradient(135deg, rgba(255, 56, 92, 0.16), rgba(255, 56, 92, 0.04)),
+    linear-gradient(135deg, #f9fafb, #f3f4f6);
+  border: 1px solid #f3d6de;
+  border-radius: 28px;
+  box-shadow: 0 14px 32px rgba(17, 24, 39, 0.05);
+}
+
+.hero-card--large {
+  min-height: 280px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 22px;
+}
+
+.hero-card__label {
+  width: fit-content;
+  background: rgba(255, 255, 255, 0.94);
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.hero-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hero-card__body strong {
+  font-size: 1.5rem;
+}
+
+.hero-card__body span {
+  color: #4b5563;
+  line-height: 1.6;
+  max-width: 320px;
+}
+
+.hero-mini-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
 }
 
-.stat {
+.hero-card--mini {
+  padding: 18px;
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.mini-title {
+  display: block;
+  color: var(--muted);
+  font-size: 0.88rem;
+  margin-bottom: 8px;
+}
+
+.hero-card--mini strong {
+  font-size: 1.7rem;
+  font-weight: 800;
+}
+
+.stats-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.stat-box {
   background: white;
   border: 1px solid var(--border);
   border-radius: 22px;
   padding: 18px;
+  box-shadow: 0 10px 24px rgba(17, 24, 39, 0.04);
 }
 
-.stat span {
+.stat-box__label {
   display: block;
   color: var(--muted);
+  font-size: 0.88rem;
   margin-bottom: 8px;
 }
 
-.stat strong {
+.stat-box__value {
   font-size: 1.5rem;
   font-weight: 800;
 }
 
 .section-head {
-  margin-bottom: 18px;
   display: flex;
   justify-content: space-between;
-  gap: 16px;
   align-items: end;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.section-head--compact {
+  margin-top: 8px;
 }
 
 .section-head h2 {
-  margin: 0 0 6px;
+  margin: 10px 0 6px;
+  font-size: 2rem;
 }
 
 .section-head p {
@@ -187,6 +438,122 @@ onMounted(async () => {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 18px;
+  margin-bottom: 34px;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  margin-bottom: 34px;
+}
+
+.info-card,
+.benefit-card {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 22px;
+  box-shadow: var(--shadow);
+}
+
+.info-card h3,
+.benefit-card h3 {
+  margin: 14px 0 10px;
+  font-size: 1.15rem;
+}
+
+.info-card p,
+.benefit-card p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.75;
+}
+
+.hosting-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 22px;
+  background: linear-gradient(135deg, #111827, #1f2937);
+  color: white;
+  border-radius: 28px;
+  padding: 30px;
+  margin-bottom: 34px;
+}
+
+.hosting-banner__copy .section-kicker {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+
+.hosting-banner__copy h2 {
+  margin: 14px 0 10px;
+  font-size: 2rem;
+  max-width: 560px;
+}
+
+.hosting-banner__copy p {
+  margin: 0;
+  max-width: 620px;
+  color: rgba(255, 255, 255, 0.78);
+  line-height: 1.75;
+}
+
+.hosting-banner__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 220px;
+}
+
+.benefits-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.benefit-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  background: #fff1f3;
+  font-size: 1.4rem;
+}
+
+.empty-hero {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 28px;
+  padding: 42px 28px;
+  text-align: center;
+  box-shadow: var(--shadow);
+  margin-bottom: 34px;
+}
+
+.empty-hero__icon {
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 16px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #fff1f3;
+  font-size: 1.8rem;
+}
+
+.empty-hero h3 {
+  margin: 0 0 10px;
+  font-size: 1.4rem;
+}
+
+.empty-hero p {
+  max-width: 560px;
+  margin: 0 auto 20px;
+  color: var(--muted);
+  line-height: 1.75;
 }
 
 .alert {
@@ -210,10 +577,13 @@ onMounted(async () => {
 
 .btn,
 .link-btn {
-  border: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 16px;
-  padding: 13px 18px;
+  padding: 14px 18px;
   font-weight: 700;
+  text-decoration: none;
 }
 
 .btn--primary {
@@ -224,18 +594,74 @@ onMounted(async () => {
 .btn--secondary,
 .link-btn {
   background: white;
-  border: 1px solid var(--border);
   color: var(--text);
+  border: 1px solid var(--border);
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 1200px) {
   .hero,
-  .listing-grid {
+  .stats-strip,
+  .listing-grid,
+  .info-grid,
+  .benefits-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .hosting-banner {
+    flex-direction: column;
+    align-items: start;
+  }
+
+  .hosting-banner__actions {
+    width: 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 900px) {
+  .hero,
+  .stats-strip,
+  .listing-grid,
+  .info-grid,
+  .benefits-grid {
     grid-template-columns: 1fr;
   }
 
-  .hero__copy h1 {
-    font-size: 2.2rem;
+  .hero__content h1 {
+    font-size: 2.4rem;
+  }
+
+  .section-head {
+    flex-direction: column;
+    align-items: start;
+  }
+
+  .hero-mini-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 700px) {
+  .page {
+    padding: 24px 14px 42px;
+  }
+
+  .hero {
+    padding: 26px 20px;
+  }
+
+  .hero__content h1 {
+    font-size: 2rem;
+  }
+
+  .hosting-banner {
+    padding: 24px 20px;
+  }
+
+  .hosting-banner__copy h2,
+  .section-head h2 {
+    font-size: 1.6rem;
   }
 }
 </style>

@@ -95,6 +95,42 @@ contract mStay {
         );
     }
 
+    function isDateRangeAvailable(
+        uint256 _listingId,
+        uint256 _checkInDate,
+        uint256 _checkOutDate
+    ) public view returns (bool){
+        require(_listingId > 0 && _listingId <= listingCount, "Listing does not exist.");
+        require(_checkOutDate > _checkInDate, "Invalid dates.");
+
+        for(uint256 i = 1; i <= reservationCount; i++){
+            Reservation memory reservation = reservations[i];
+
+            if(reservation.listingId != _listingId){
+                continue;
+            }
+
+            if(
+                reservation.status == ReservationStatus.CancelledByGuest ||
+                reservation.status == ReservationStatus.CancelledByHost ||
+                reservation.status == ReservationStatus.Refunded
+            ){
+                continue;
+            }
+
+            bool overlaps = 
+            _checkInDate < reservation.checkOutDate &&
+            _checkOutDate > reservation.checkInDate;
+
+            if(overlaps){
+                return false;
+            }
+
+        } 
+
+        return true;
+    }
+
     function makeReservation(
         uint256 _listingId,
         uint256 _checkInDate,
@@ -104,6 +140,7 @@ contract mStay {
         require(listings[_listingId].isActive, "Listing is not active");
         require(listings[_listingId].host != msg.sender, "Host cannot reserve own listing");
         require(_checkOutDate > _checkInDate, "Invalid dates");
+        require(isDateRangeAvailable(_listingId, _checkInDate, _checkOutDate), "Selected dates are not available");
 
         (uint256 nights, uint256 totalPrice) = calculateReservationPrice(
             _listingId,

@@ -1,114 +1,37 @@
 <script setup>
-import { ref, onMounted, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { computed, onMounted } from 'vue'
+import { RouterLink } from 'vue-router'
 import AppNavbar from '../components/layout/AppNavbar.vue'
+import AppFooter from '../components/layout/AppFooter.vue'
 import ReservationCard from '../components/reservations/ReservationCard.vue'
 import { useMstay } from '../composables/useMstay'
-import AppFooter from '@/components/layout/AppFooter.vue'
-
-const route = useRoute()
 
 const {
   walletAddress,
-  listings,
   myReservations,
   successMsg,
   errorMsg,
   connectCurrentWallet,
-  loadListings,
   loadMyReservations,
   cancelReservationByGuest,
-  makeReservation,
-  calculateReservationPrice,
 } = useMstay()
 
-const isBooking = ref(false)
-const reservationPricePreview = ref('0')
-
-const reservationForm = ref({
-  listingId: route.query.listingId || '',
-  checkIn: '',
-  checkOut: '',
+const activeTripsCount = computed(() => {
+  return myReservations.value.filter((reservation) => reservation.status === '0').length
 })
 
-const selectedListing = ref(null)
-
-function toUnixTimestamp(dateString) {
-  return Math.floor(new Date(dateString).getTime() / 1000)
-}
-
-function fromWei(value) {
-  return (Number(value) / 1e18).toString()
-}
-
-async function syncSelectedListing() {
-  selectedListing.value =
-    listings.value.find((x) => x.id === String(reservationForm.value.listingId)) || null
-}
-
-async function updateReservationPreview() {
-  try {
-    await syncSelectedListing()
-
-    if (
-      !reservationForm.value.listingId ||
-      !reservationForm.value.checkIn ||
-      !reservationForm.value.checkOut
-    ) {
-      reservationPricePreview.value = '0'
-      return
-    }
-
-    const checkInTs = toUnixTimestamp(reservationForm.value.checkIn)
-    const checkOutTs = toUnixTimestamp(reservationForm.value.checkOut)
-
-    const [, totalPriceWei] = await calculateReservationPrice(
-      Number(reservationForm.value.listingId),
-      checkInTs,
-      checkOutTs,
-    )
-
-    reservationPricePreview.value = fromWei(totalPriceWei)
-  } catch {
-    reservationPricePreview.value = '0'
-  }
-}
-
-async function handleReservation() {
-  try {
-    isBooking.value = true
-
-    const checkInTs = toUnixTimestamp(reservationForm.value.checkIn)
-    const checkOutTs = toUnixTimestamp(reservationForm.value.checkOut)
-
-    await makeReservation(Number(reservationForm.value.listingId), checkInTs, checkOutTs)
-
-    await loadMyReservations()
-
-    reservationForm.value.checkIn = ''
-    reservationForm.value.checkOut = ''
-    reservationPricePreview.value = '0'
-  } finally {
-    isBooking.value = false
-  }
-}
+const pastTripsCount = computed(() => {
+  return myReservations.value.filter((reservation) =>
+    ['1', '2', '3', '4'].includes(reservation.status),
+  ).length
+})
 
 async function handleGuestCancel(id) {
   await cancelReservationByGuest(Number(id))
   await loadMyReservations()
 }
 
-watch(
-  () => reservationForm.value.listingId,
-  async () => {
-    await syncSelectedListing()
-    await updateReservationPreview()
-  },
-)
-
 onMounted(async () => {
-  await loadListings()
-  await syncSelectedListing()
   if (walletAddress.value) {
     await loadMyReservations()
   }
@@ -120,70 +43,67 @@ onMounted(async () => {
     <AppNavbar :wallet-address="walletAddress" @connect="connectCurrentWallet" />
 
     <main class="page">
-      <div class="layout">
-        <section class="booking-card">
-          <h1>Book your stay</h1>
-          <p>Rezerviraj odabrani smještaj preko escrow modela.</p>
-
-          <section v-if="successMsg" class="alert alert--success">{{ successMsg }}</section>
-          <section v-if="errorMsg" class="alert alert--error">{{ errorMsg }}</section>
-
-          <div class="form-group">
-            <label>ID oglasa</label>
-            <input v-model="reservationForm.listingId" type="number" readonly />
-          </div>
-
-          <p v-if="selectedListing" class="selected">
-            {{ selectedListing.title }} — {{ selectedListing.location }}
+      <section class="hero">
+        <div class="hero__copy">
+          <span class="eyebrow">Guest dashboard</span>
+          <h1>My Trips</h1>
+          <p>
+            Ovdje vidiš sve svoje rezervacije kao gost, njihov status i moguće akcije poput
+            otkazivanja rezervacije prije check-ina.
           </p>
+        </div>
 
-          <div class="form-group">
-            <label>Check-in</label>
-            <input
-              v-model="reservationForm.checkIn"
-              type="date"
-              @change="updateReservationPreview"
-            />
+        <div class="hero__stats">
+          <div class="stat-card">
+            <span class="stat-label">Aktivne rezervacije</span>
+            <strong class="stat-value">{{ activeTripsCount }}</strong>
           </div>
 
-          <div class="form-group">
-            <label>Check-out</label>
-            <input
-              v-model="reservationForm.checkOut"
-              type="date"
-              @change="updateReservationPreview"
-            />
+          <div class="stat-card">
+            <span class="stat-label">Završene / arhivirane</span>
+            <strong class="stat-value">{{ pastTripsCount }}</strong>
           </div>
+        </div>
+      </section>
 
-          <div v-if="reservationPricePreview !== '0'" class="preview">
-            <span>Ukupna cijena</span>
-            <strong>{{ reservationPricePreview }} ETH</strong>
-          </div>
+      <section v-if="successMsg" class="alert alert--success">
+        {{ successMsg }}
+      </section>
 
-          <button class="primary-btn" @click="handleReservation" :disabled="isBooking">
-            {{ isBooking ? 'Slanje transakcije...' : 'Rezerviraj' }}
-          </button>
-        </section>
+      <section v-if="errorMsg" class="alert alert--error">
+        {{ errorMsg }}
+      </section>
 
-        <section>
-          <div class="section-head">
-            <h2>My Trips</h2>
-            <p>Rezervacije gdje si gost.</p>
-          </div>
+      <section class="section-head">
+        <div>
+          <h2>Your reservations</h2>
+          <p>Pregled svih rezervacija koje si napravila kao gost.</p>
+        </div>
 
-          <div class="reservation-grid">
-            <ReservationCard
-              v-for="reservation in myReservations"
-              :key="reservation.id"
-              :reservation="reservation"
-              mode="guest"
-              @guest-cancel="handleGuestCancel"
-            />
-          </div>
-        </section>
-      </div>
-      <AppFooter />
+        <RouterLink to="/listings" class="explore-btn"> Explore stays </RouterLink>
+      </section>
+
+      <section v-if="myReservations.length === 0" class="empty-state">
+        <div class="empty-state__icon">✈️</div>
+        <h3>Nemaš još nijednu rezervaciju</h3>
+        <p>
+          Kada rezerviraš neki smještaj, ovdje će se prikazati tvoje aktivne i prošle rezervacije.
+        </p>
+        <RouterLink to="/listings" class="primary-link-btn"> Pregledaj oglase </RouterLink>
+      </section>
+
+      <section v-else class="reservation-grid">
+        <ReservationCard
+          v-for="reservation in myReservations"
+          :key="reservation.id"
+          :reservation="reservation"
+          mode="guest"
+          @guest-cancel="handleGuestCancel"
+        />
+      </section>
     </main>
+
+    <AppFooter />
   </div>
 </template>
 
@@ -194,77 +114,72 @@ onMounted(async () => {
   padding: 32px 24px 56px;
 }
 
-.layout {
+.hero {
   display: grid;
-  grid-template-columns: 380px 1fr;
+  grid-template-columns: 1.2fr 0.9fr;
   gap: 22px;
+  background: linear-gradient(135deg, #ffffff, #f9fafb);
+  border: 1px solid var(--border);
+  border-radius: 28px;
+  padding: 32px;
+  margin-bottom: 24px;
+  box-shadow: var(--shadow);
 }
 
-.booking-card {
+.eyebrow {
+  display: inline-block;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #4338ca;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.hero__copy h1 {
+  margin: 0 0 10px;
+  font-size: 2.4rem;
+}
+
+.hero__copy p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.7;
+  max-width: 680px;
+}
+
+.hero__stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.stat-card {
   background: white;
   border: 1px solid var(--border);
-  border-radius: 24px;
-  padding: 22px;
-  box-shadow: var(--shadow);
-  height: fit-content;
-  position: sticky;
-  top: 100px;
+  border-radius: 22px;
+  padding: 18px;
+  box-shadow: 0 10px 24px rgba(17, 24, 39, 0.04);
 }
 
-.booking-card h1 {
-  margin: 0 0 6px;
-}
-
-.booking-card p {
-  margin: 0 0 18px;
+.stat-label {
+  display: block;
+  font-size: 0.88rem;
   color: var(--muted);
+  margin-bottom: 8px;
 }
 
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 14px;
-}
-
-.form-group label {
-  font-weight: 700;
-}
-
-input {
-  border: 1px solid #dddddd;
-  border-radius: 16px;
-  padding: 14px 16px;
-}
-
-.selected {
-  color: #374151;
-  font-weight: 600;
-  margin-bottom: 14px !important;
-}
-
-.preview {
-  background: #fff5f7;
-  border: 1px solid #ffd7df;
-  border-radius: 16px;
-  padding: 14px 16px;
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 16px;
-}
-
-.primary-btn {
-  width: 100%;
-  border: 0;
-  border-radius: 16px;
-  padding: 14px 16px;
-  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-  color: white;
-  font-weight: 700;
-  cursor: pointer;
+.stat-value {
+  font-size: 1.8rem;
+  font-weight: 800;
 }
 
 .section-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
   margin-bottom: 18px;
 }
 
@@ -277,10 +192,64 @@ input {
   color: var(--muted);
 }
 
+.explore-btn,
+.primary-link-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16px;
+  padding: 13px 18px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.explore-btn {
+  background: white;
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.primary-link-btn {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: white;
+}
+
 .reservation-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18px;
+}
+
+.empty-state {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 28px;
+  padding: 44px 28px;
+  text-align: center;
+  box-shadow: var(--shadow);
+}
+
+.empty-state__icon {
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 16px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #fff1f3;
+  font-size: 1.8rem;
+}
+
+.empty-state h3 {
+  margin: 0 0 10px;
+  font-size: 1.4rem;
+}
+
+.empty-state p {
+  max-width: 560px;
+  margin: 0 auto 20px;
+  color: var(--muted);
+  line-height: 1.7;
 }
 
 .alert {
@@ -303,13 +272,32 @@ input {
 }
 
 @media (max-width: 1100px) {
-  .layout,
+  .hero,
   .reservation-grid {
     grid-template-columns: 1fr;
   }
 
-  .booking-card {
-    position: static;
+  .section-head {
+    flex-direction: column;
+    align-items: start;
+  }
+}
+
+@media (max-width: 700px) {
+  .page {
+    padding: 24px 14px 42px;
+  }
+
+  .hero {
+    padding: 24px;
+  }
+
+  .hero__copy h1 {
+    font-size: 2rem;
+  }
+
+  .hero__stats {
+    grid-template-columns: 1fr;
   }
 }
 </style>

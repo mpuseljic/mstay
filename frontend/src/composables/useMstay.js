@@ -12,6 +12,7 @@ import {
   releasePayout,
   fromWeiToEth,
   calculateReservationPrice,
+  checkDateAvailability,
 } from '../services/web3'
 
 const walletAddress = ref('')
@@ -124,5 +125,6 @@ export function useMstay() {
     cancelReservationByHost,
     releasePayout,
     calculateReservationPrice,
+    checkDateAvailability,
   }
 }

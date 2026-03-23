@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import AppNavbar from '../components/layout/AppNavbar.vue'
 import { useMstay } from '../composables/useMstay'
@@ -19,6 +19,9 @@ const {
 } = useMstay()
 
 const listing = ref(null)
+const activeImage = ref('')
+const isLightboxOpen = ref(false)
+const activeImageIndex = ref(0)
 const isBooking = ref(false)
 const reservationPricePreview = ref('0')
 
@@ -44,14 +47,18 @@ const isOwnListing = computed(() => {
   return listing.value.host.toLowerCase() === walletAddress.value.toLowerCase()
 })
 
+const allImages = computed(() => {
+  return listing.value?.imageUrls || []
+})
+
 const mainImage = computed(() => {
-  if (!listing.value?.imageUrls?.length) return ''
-  return listing.value.imageUrls[0]
+  return allImages.value[activeImageIndex.value] || ''
 })
 
 const galleryImages = computed(() => {
-  if (!listing.value?.imageUrls?.length) return []
-  return listing.value.imageUrls.slice(1)
+  return allImages.value
+    .map((img, index) => ({ img, index }))
+    .filter((item) => item.index !== activeImageIndex.value)
 })
 
 function shortenAddress(address) {
@@ -113,6 +120,44 @@ async function handleReservation() {
   }
 }
 
+function setActiveImage(image) {
+  activeImage.value = image
+}
+
+function setActiveImageByIndex(index) {
+  activeImageIndex.value = index
+}
+
+function openLightbox(index = activeImageIndex.value) {
+  activeImageIndex.value = index
+  isLightboxOpen.value = true
+}
+
+function closeLightbox() {
+  isLightboxOpen.value = false
+}
+
+function showPrevImage() {
+  if (!allImages.value.length) return
+  activeImageIndex.value =
+    (activeImageIndex.value - 1 + allImages.value.length) % allImages.value.length
+}
+
+function showNextImage() {
+  if (!allImages.value.length) return
+  activeImageIndex.value = (activeImageIndex.value + 1) % allImages.value.length
+}
+
+watch(
+  () => listing.value,
+  (newListing) => {
+    if (newListing?.imageUrls?.length) {
+      activeImageIndex.value = 0
+    }
+  },
+  { immediate: true },
+)
+
 onMounted(async () => {
   await loadCurrentListing()
 })
@@ -141,17 +186,29 @@ onMounted(async () => {
       <section v-if="errorMsg" class="alert alert--error">{{ errorMsg }}</section>
 
       <section class="gallery" v-if="listing.imageUrls?.length">
-        <div class="gallery__main">
+        <div class="gallery__main" @click="openLightbox(activeImageIndex)">
           <img v-if="mainImage" :src="mainImage" :alt="listing.title" class="gallery__img" />
           <div v-else class="gallery__main-placeholder">
             <span class="gallery__label">mStay Stay</span>
           </div>
+
+          <div v-if="mainImage" class="gallery__main-badge">Glavna fotografija</div>
         </div>
 
         <div class="gallery__side" v-if="galleryImages.length">
-          <div v-for="(image, index) in galleryImages" :key="index" class="gallery__mini">
-            <img :src="image" :alt="`${listing.title} ${index + 2}`" class="gallery__mini-img" />
-          </div>
+          <button
+            v-for="item in galleryImages"
+            :key="item.index"
+            class="gallery__mini"
+            type="button"
+            @click="setActiveImageByIndex(item.index)"
+          >
+            <img
+              :src="item.img"
+              :alt="`${listing.title} ${item.index + 1}`"
+              class="gallery__mini-img"
+            />
+          </button>
         </div>
       </section>
 
@@ -162,6 +219,32 @@ onMounted(async () => {
           </div>
         </div>
       </section>
+
+      <div v-if="isLightboxOpen" class="lightbox" @click.self="closeLightbox">
+        <button class="lightbox__close" @click="closeLightbox">✕</button>
+
+        <button
+          v-if="allImages.length > 1"
+          class="lightbox__nav lightbox__nav--left"
+          @click.stop="showPrevImage"
+        >
+          ‹
+        </button>
+
+        <div class="lightbox__content">
+          <img :src="mainImage" :alt="listing.title" class="lightbox__image" />
+
+          <div class="lightbox__counter">{{ activeImageIndex + 1 }} / {{ allImages.length }}</div>
+        </div>
+
+        <button
+          v-if="allImages.length > 1"
+          class="lightbox__nav lightbox__nav--right"
+          @click.stop="showNextImage"
+        >
+          ›
+        </button>
+      </div>
 
       <section class="details-layout">
         <div class="details-content">
@@ -377,6 +460,18 @@ onMounted(async () => {
   border: 1px solid var(--border);
   overflow: hidden;
   background: #f3f4f6;
+  padding: 0;
+  cursor: pointer;
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    border-color 0.18s ease;
+}
+
+.gallery__mini:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(17, 24, 39, 0.08);
+  border-color: #d1d5db;
 }
 
 .gallery__img,
@@ -402,6 +497,87 @@ onMounted(async () => {
   background: rgba(255, 255, 255, 0.95);
   border-radius: 999px;
   padding: 8px 12px;
+  font-weight: 700;
+}
+
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(17, 24, 39, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+}
+
+.lightbox__content {
+  position: relative;
+  max-width: 1100px;
+  width: 100%;
+  max-height: 85vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lightbox__image {
+  max-width: 100%;
+  max-height: 85vh;
+  object-fit: contain;
+  border-radius: 20px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+}
+
+.lightbox__close {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  width: 48px;
+  height: 48px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  color: white;
+  font-size: 1.3rem;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+}
+
+.lightbox__nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 56px;
+  height: 56px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.14);
+  color: white;
+  font-size: 2rem;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  z-index: 2;
+}
+
+.lightbox__nav--left {
+  left: 24px;
+}
+
+.lightbox__nav--right {
+  right: 24px;
+}
+
+.lightbox__counter {
+  position: absolute;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(17, 24, 39, 0.68);
+  color: white;
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-size: 0.88rem;
   font-weight: 700;
 }
 

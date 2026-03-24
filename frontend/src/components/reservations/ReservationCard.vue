@@ -8,9 +8,19 @@ const props = defineProps({
     type: String,
     default: 'guest',
   },
+  canReview: {
+    type: Boolean,
+    default: false,
+  },
 })
 
-const emit = defineEmits(['guest-cancel', 'host-cancel', 'host-payout'])
+const emit = defineEmits([
+  'guest-cancel',
+  'host-cancel',
+  'host-payout',
+  'guest-review',
+  'host-review',
+])
 
 function getStatusLabel(status) {
   switch (String(status)) {
@@ -68,20 +78,47 @@ function shortenAddress(address) {
     </div>
 
     <div class="actions">
-      <button
-        v-if="mode === 'guest' && reservation.status === '0'"
-        class="btn btn--danger"
-        @click="$emit('guest-cancel', reservation.id)"
-      >
-        Otkaži kao gost
-      </button>
+      <template v-if="mode === 'guest'">
+        <button
+          v-if="reservation.status === '0'"
+          class="btn btn--danger"
+          @click="$emit('guest-cancel', reservation.id)"
+        >
+          Otkaži kao gost
+        </button>
 
-      <template v-if="mode === 'host' && reservation.status === '0'">
-        <button class="btn btn--danger" @click="$emit('host-cancel', reservation.id)">
+        <button
+          v-if="canReview"
+          class="btn btn--secondary"
+          @click="$emit('guest-review', reservation.id)"
+        >
+          Ocijeni domaćina
+        </button>
+      </template>
+
+      <template v-if="mode === 'host'">
+        <button
+          v-if="reservation.status === '0'"
+          class="btn btn--danger"
+          @click="$emit('host-cancel', reservation.id)"
+        >
           Otkaži kao domaćin
         </button>
-        <button class="btn btn--success" @click="$emit('host-payout', reservation.id)">
+
+        <button
+          v-if="reservation.status === '0'"
+          class="btn btn--success"
+          @click="$emit('host-payout', reservation.id)"
+        >
           Isplati domaćinu
+        </button>
+
+        <button
+          v-if="canReview"
+          class="btn btn--secondary"
+          @click="$emit('host-review', reservation.id)"
+        >
+          Ocijeni gosta
         </button>
       </template>
     </div>
@@ -137,6 +174,10 @@ function shortenAddress(address) {
 
 .btn--success {
   background: var(--success);
+}
+
+.btn--secondary {
+  background: #111827;
 }
 
 .badge {

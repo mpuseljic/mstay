@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import AppNavbar from '../components/layout/AppNavbar.vue'
 import AppFooter from '../components/layout/AppFooter.vue'
@@ -15,7 +15,17 @@ const {
   loadHostReservations,
   cancelReservationByHost,
   releasePayout,
+  leaveReview,
 } = useMstay()
+
+const reviewForm = ref({
+  reservationId: '',
+  rating: 5,
+  comment: '',
+})
+
+const reviewMessage = ref('')
+const reviewError = ref('')
 
 const activeHostingReservations = computed(() => {
   return hostReservations.value.filter((reservation) => reservation.status === '0').length
@@ -27,6 +37,11 @@ const closedHostingReservations = computed(() => {
   ).length
 })
 
+function canReviewReservation(reservation) {
+  const now = Math.floor(Date.now() / 1000)
+  return now >= reservation.checkOutTimestamp
+}
+
 async function handleHostCancel(id) {
   await cancelReservationByHost(Number(id))
   await loadHostReservations()
@@ -35,6 +50,35 @@ async function handleHostCancel(id) {
 async function handleHostPayout(id) {
   await releasePayout(Number(id))
   await loadHostReservations()
+}
+
+function openHostReviewForm(reservationId) {
+  reviewForm.value = {
+    reservationId,
+    rating: 5,
+    comment: '',
+  }
+  reviewMessage.value = ''
+  reviewError.value = ''
+}
+
+async function handleHostReview() {
+  try {
+    reviewError.value = ''
+    reviewMessage.value = ''
+
+    await leaveReview(
+      Number(reviewForm.value.reservationId),
+      Number(reviewForm.value.rating),
+      reviewForm.value.comment,
+      false,
+    )
+
+    reviewMessage.value = 'Recenzija za gosta je uspješno spremljena.'
+    await loadHostReservations()
+  } catch (err) {
+    reviewError.value = err.message || 'Greška pri spremanju recenzije.'
+  }
 }
 
 onMounted(async () => {
@@ -54,8 +98,8 @@ onMounted(async () => {
           <span class="eyebrow">Host dashboard</span>
           <h1>My Hosting</h1>
           <p>
-            Ovdje upravljaš rezervacijama za svoje oglase, otkazivanjima i isplatama escrow
-            sredstava nakon početka boravka.
+            Ovdje upravljaš rezervacijama za svoje oglase, otkazivanjima, isplatama escrow sredstava
+            i ocjenjivanjem gostiju nakon boravka.
           </p>
         </div>
 
@@ -94,7 +138,7 @@ onMounted(async () => {
         <h3>Još nema rezervacija za tvoje oglase</h3>
         <p>
           Kada gost rezervira jedan od tvojih oglasa, ovdje ćeš vidjeti sve detalje, uključujući
-          status rezervacije, mogućnost otkazivanja i isplate sredstava.
+          status rezervacije, mogućnost otkazivanja, isplate i recenzije.
         </p>
         <RouterLink to="/create-listing" class="primary-link-btn"> Objavi novi oglas </RouterLink>
       </section>
@@ -105,9 +149,47 @@ onMounted(async () => {
           :key="reservation.id"
           :reservation="reservation"
           mode="host"
+          :can-review="canReviewReservation(reservation)"
           @host-cancel="handleHostCancel"
           @host-payout="handleHostPayout"
+          @host-review="openHostReviewForm"
         />
+      </section>
+
+      <section v-if="reviewForm.reservationId" class="review-panel">
+        <h3>Ocijeni gosta</h3>
+
+        <div v-if="reviewError" class="alert alert--error">
+          {{ reviewError }}
+        </div>
+
+        <div v-if="reviewMessage" class="alert alert--success">
+          {{ reviewMessage }}
+        </div>
+
+        <div class="review-grid">
+          <div class="form-group">
+            <label>Ocjena</label>
+            <select v-model="reviewForm.rating">
+              <option :value="5">5</option>
+              <option :value="4">4</option>
+              <option :value="3">3</option>
+              <option :value="2">2</option>
+              <option :value="1">1</option>
+            </select>
+          </div>
+
+          <div class="form-group form-group--full">
+            <label>Komentar</label>
+            <textarea
+              v-model="reviewForm.comment"
+              rows="4"
+              placeholder="Napiši kratku recenziju o gostu..."
+            ></textarea>
+          </div>
+        </div>
+
+        <button class="primary-link-btn" @click="handleHostReview">Spremi recenziju</button>
       </section>
     </main>
 
@@ -220,6 +302,8 @@ onMounted(async () => {
 .primary-link-btn {
   background: linear-gradient(135deg, var(--primary), var(--primary-dark));
   color: white;
+  border: 0;
+  cursor: pointer;
 }
 
 .reservation-grid {
@@ -228,13 +312,17 @@ onMounted(async () => {
   gap: 18px;
 }
 
-.empty-state {
+.empty-state,
+.review-panel {
   background: white;
   border: 1px solid var(--border);
   border-radius: 28px;
   padding: 44px 28px;
-  text-align: center;
   box-shadow: var(--shadow);
+}
+
+.empty-state {
+  text-align: center;
 }
 
 .empty-state__icon {
@@ -258,6 +346,35 @@ onMounted(async () => {
   margin: 0 auto 20px;
   color: var(--muted);
   line-height: 1.7;
+}
+
+.review-panel {
+  margin-top: 28px;
+  padding: 24px;
+}
+
+.review-panel h3 {
+  margin: 0 0 16px;
+}
+
+.review-grid {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+select,
+textarea {
+  border: 1px solid #dddddd;
+  border-radius: 16px;
+  padding: 14px 16px;
+  font: inherit;
 }
 
 .alert {

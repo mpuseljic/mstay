@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router'
 import AppNavbar from '../components/layout/AppNavbar.vue'
 import { useMstay } from '../composables/useMstay'
 import AppFooter from '@/components/layout/AppFooter.vue'
+import ReviewCard from '@/components/reviews/ReviewCard.vue'
 
 const route = useRoute()
 
@@ -17,6 +18,7 @@ const {
   makeReservation,
   calculateReservationPrice,
   checkDateAvailability,
+  loadReviewsForUser,
 } = useMstay()
 
 const listing = ref(null)
@@ -27,6 +29,7 @@ const isBooking = ref(false)
 const reservationPricePreview = ref('0')
 const bookingError = ref('')
 const bookingSuccess = ref('')
+const reviews = ref([])
 
 const reservationForm = ref({
   checkIn: '',
@@ -80,6 +83,10 @@ async function loadCurrentListing() {
   await loadListings()
 
   listing.value = listings.value.find((item) => item.id === String(route.params.id)) || null
+
+  if (listing.value?.host) {
+    reviews.value = await loadReviewsForUser(listing.value.host)
+  }
 }
 
 async function updateReservationPreview() {
@@ -324,29 +331,13 @@ onMounted(async () => {
 
           <div class="content-card">
             <h2>Guest reviews</h2>
-            <p class="reviews-intro">
-              Reviews i reputacijski sustav bit će sljedeća nadogradnja platforme. Ovdje će se
-              prikazivati ocjene gosta i domaćina nakon završene rezervacije.
+
+            <p v-if="reviews.length === 0" class="reviews-intro">
+              Ovaj domaćin još nema recenzija.
             </p>
 
-            <div class="review-placeholder-grid">
-              <div class="review-placeholder">
-                <div class="review-top">
-                  <strong>5.0</strong>
-                  <span>Excellent stay</span>
-                </div>
-                <p>Clean UI, transparent on-chain booking i escrow payment flow.</p>
-              </div>
-
-              <div class="review-placeholder">
-                <div class="review-top">
-                  <strong>4.9</strong>
-                  <span>Great host experience</span>
-                </div>
-                <p>
-                  Host dashboard i payout logika pružaju dobar temelj za decentralizirani hosting.
-                </p>
-              </div>
+            <div v-else class="review-placeholder-grid">
+              <ReviewCard v-for="review in reviews" :key="review.id" :review="review" />
             </div>
           </div>
         </div>

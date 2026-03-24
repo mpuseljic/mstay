@@ -1,7 +1,7 @@
 import { ref } from 'vue'
 import {
   connectWallet,
-  getMStayContract,
+  getMStayCoreContract,
   createListing,
   fetchAllListings,
   makeReservation,
@@ -13,6 +13,8 @@ import {
   fromWeiToEth,
   calculateReservationPrice,
   checkDateAvailability,
+  leaveReview,
+  fetchReviewsForUser,
 } from '../services/web3'
 
 const walletAddress = ref('')
@@ -27,13 +29,23 @@ function formatDate(unix) {
   return new Date(Number(unix) * 1000).toLocaleDateString('hr-HR')
 }
 
+function formatDateTime(unix) {
+  return new Date(Number(unix) * 1000).toLocaleString('hr-HR')
+}
+
 async function connectCurrentWallet() {
   try {
     errorMsg.value = ''
     successMsg.value = ''
     walletAddress.value = await connectWallet()
     successMsg.value = 'MetaMask je uspješno spojen.'
-    await Promise.all([loadMyReservations(), loadHostReservations()])
+
+    await Promise.all([
+      loadListingCount(),
+      loadListings(),
+      loadMyReservations(),
+      loadHostReservations(),
+    ])
   } catch (err) {
     errorMsg.value = err.message || 'Greška pri spajanju MetaMaska.'
   }
@@ -41,7 +53,7 @@ async function connectCurrentWallet() {
 
 async function loadListingCount() {
   try {
-    const contract = await getMStayContract(false)
+    const contract = await getMStayCoreContract(false)
     const count = await contract.listingCount()
     listingCount.value = count.toString()
   } catch (err) {
@@ -52,12 +64,13 @@ async function loadListingCount() {
 async function loadListings() {
   try {
     const data = await fetchAllListings()
+
     listings.value = data.map((item) => ({
       id: item.id.toString(),
       host: item.host,
       title: item.title,
       location: item.location,
-      imageUrls: item.imageUrls,
+      imageUrls: item.imageUrls || [],
       imageUrl: item.imageUrls?.[0] || '',
       pricePerNight: fromWeiToEth(item.pricePerNight),
       isActive: item.isActive,
@@ -70,13 +83,17 @@ async function loadListings() {
 async function loadMyReservations() {
   try {
     if (!walletAddress.value) return
+
     const data = await fetchReservationsByGuest(walletAddress.value)
+
     myReservations.value = data.map((item) => ({
       id: item.id.toString(),
       listingId: item.listingId.toString(),
       guest: item.guest,
       checkInDate: formatDate(item.checkInDate),
       checkOutDate: formatDate(item.checkOutDate),
+      checkInTimestamp: Number(item.checkInDate),
+      checkOutTimestamp: Number(item.checkOutDate),
       nights: item.nights.toString(),
       totalPrice: fromWeiToEth(item.totalPrice),
       status: item.status.toString(),
@@ -89,19 +106,43 @@ async function loadMyReservations() {
 async function loadHostReservations() {
   try {
     if (!walletAddress.value) return
+
     const data = await fetchReservationsByHost(walletAddress.value)
+
     hostReservations.value = data.map((item) => ({
       id: item.id.toString(),
       listingId: item.listingId.toString(),
       guest: item.guest,
       checkInDate: formatDate(item.checkInDate),
       checkOutDate: formatDate(item.checkOutDate),
+      checkInTimestamp: Number(item.checkInDate),
+      checkOutTimestamp: Number(item.checkOutDate),
       nights: item.nights.toString(),
       totalPrice: fromWeiToEth(item.totalPrice),
       status: item.status.toString(),
     }))
   } catch (err) {
     errorMsg.value = err.message || 'Greška pri dohvaćanju host rezervacija.'
+  }
+}
+
+async function loadReviewsForUser(userAddress) {
+  try {
+    const data = await fetchReviewsForUser(userAddress)
+
+    return data.map((item) => ({
+      id: item.id.toString(),
+      reservationId: item.reservationId.toString(),
+      reviewer: item.reviewer,
+      reviewedUser: item.reviewedUser,
+      rating: Number(item.rating),
+      comment: item.comment,
+      forHost: item.forHost,
+      createdAt: formatDateTime(item.createdAt),
+    }))
+  } catch (err) {
+    errorMsg.value = err.message || 'Greška pri dohvaćanju recenzija.'
+    return []
   }
 }
 
@@ -119,6 +160,7 @@ export function useMstay() {
     loadListings,
     loadMyReservations,
     loadHostReservations,
+    loadReviewsForUser,
     createListing,
     makeReservation,
     cancelReservationByGuest,
@@ -126,5 +168,6 @@ export function useMstay() {
     releasePayout,
     calculateReservationPrice,
     checkDateAvailability,
+    leaveReview,
   }
 }

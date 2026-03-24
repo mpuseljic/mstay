@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import AppNavbar from '../components/layout/AppNavbar.vue'
 import AppFooter from '../components/layout/AppFooter.vue'
@@ -14,7 +14,17 @@ const {
   connectCurrentWallet,
   loadMyReservations,
   cancelReservationByGuest,
+  leaveReview,
 } = useMstay()
+
+const reviewForm = ref({
+  reservationId: '',
+  rating: 5,
+  comment: '',
+})
+
+const reviewMessage = ref('')
+const reviewError = ref('')
 
 const activeTripsCount = computed(() => {
   return myReservations.value.filter((reservation) => reservation.status === '0').length
@@ -26,9 +36,43 @@ const pastTripsCount = computed(() => {
   ).length
 })
 
+function canReviewReservation(reservation) {
+  const now = Math.floor(Date.now() / 1000)
+  return now >= reservation.checkOutTimestamp
+}
+
 async function handleGuestCancel(id) {
   await cancelReservationByGuest(Number(id))
   await loadMyReservations()
+}
+
+function openGuestReviewForm(reservationId) {
+  reviewForm.value = {
+    reservationId,
+    rating: 5,
+    comment: '',
+  }
+  reviewMessage.value = ''
+  reviewError.value = ''
+}
+
+async function handleGuestReview() {
+  try {
+    reviewError.value = ''
+    reviewMessage.value = ''
+
+    await leaveReview(
+      Number(reviewForm.value.reservationId),
+      Number(reviewForm.value.rating),
+      reviewForm.value.comment,
+      true,
+    )
+
+    reviewMessage.value = 'Recenzija za domaćina je uspješno spremljena.'
+    await loadMyReservations()
+  } catch (err) {
+    reviewError.value = err.message || 'Greška pri spremanju recenzije.'
+  }
 }
 
 onMounted(async () => {
@@ -49,7 +93,7 @@ onMounted(async () => {
           <h1>My Trips</h1>
           <p>
             Ovdje vidiš sve svoje rezervacije kao gost, njihov status i moguće akcije poput
-            otkazivanja rezervacije prije check-ina.
+            otkazivanja i ocjenjivanja domaćina nakon završetka boravka.
           </p>
         </div>
 
@@ -98,8 +142,46 @@ onMounted(async () => {
           :key="reservation.id"
           :reservation="reservation"
           mode="guest"
+          :can-review="canReviewReservation(reservation)"
           @guest-cancel="handleGuestCancel"
+          @guest-review="openGuestReviewForm"
         />
+      </section>
+
+      <section v-if="reviewForm.reservationId" class="review-panel">
+        <h3>Ocijeni domaćina</h3>
+
+        <div v-if="reviewError" class="alert alert--error">
+          {{ reviewError }}
+        </div>
+
+        <div v-if="reviewMessage" class="alert alert--success">
+          {{ reviewMessage }}
+        </div>
+
+        <div class="review-grid">
+          <div class="form-group">
+            <label>Ocjena</label>
+            <select v-model="reviewForm.rating">
+              <option :value="5">5</option>
+              <option :value="4">4</option>
+              <option :value="3">3</option>
+              <option :value="2">2</option>
+              <option :value="1">1</option>
+            </select>
+          </div>
+
+          <div class="form-group form-group--full">
+            <label>Komentar</label>
+            <textarea
+              v-model="reviewForm.comment"
+              rows="4"
+              placeholder="Napiši kratku recenziju o domaćinu..."
+            ></textarea>
+          </div>
+        </div>
+
+        <button class="primary-link-btn" @click="handleGuestReview">Spremi recenziju</button>
       </section>
     </main>
 
@@ -212,6 +294,8 @@ onMounted(async () => {
 .primary-link-btn {
   background: linear-gradient(135deg, var(--primary), var(--primary-dark));
   color: white;
+  border: 0;
+  cursor: pointer;
 }
 
 .reservation-grid {
@@ -220,13 +304,17 @@ onMounted(async () => {
   gap: 18px;
 }
 
-.empty-state {
+.empty-state,
+.review-panel {
   background: white;
   border: 1px solid var(--border);
   border-radius: 28px;
   padding: 44px 28px;
-  text-align: center;
   box-shadow: var(--shadow);
+}
+
+.empty-state {
+  text-align: center;
 }
 
 .empty-state__icon {
@@ -250,6 +338,35 @@ onMounted(async () => {
   margin: 0 auto 20px;
   color: var(--muted);
   line-height: 1.7;
+}
+
+.review-panel {
+  margin-top: 28px;
+  padding: 24px;
+}
+
+.review-panel h3 {
+  margin: 0 0 16px;
+}
+
+.review-grid {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+select,
+textarea {
+  border: 1px solid #dddddd;
+  border-radius: 16px;
+  padding: 14px 16px;
+  font: inherit;
 }
 
 .alert {

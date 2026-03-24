@@ -1,4 +1,4 @@
-export const MSTAY_ABI = [
+export const MSTAY_CORE_ABI = [
   {
     anonymous: false,
     inputs: [
@@ -267,7 +267,7 @@ export const MSTAY_ABI = [
             type: 'uint256',
           },
           {
-            internalType: 'address',
+            internalType: 'address payable',
             name: 'host',
             type: 'address',
           },
@@ -297,62 +297,7 @@ export const MSTAY_ABI = [
             type: 'bool',
           },
         ],
-        internalType: 'struct mStay.Listing[]',
-        name: '',
-        type: 'tuple[]',
-      },
-    ],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [],
-    name: 'getAllReservations',
-    outputs: [
-      {
-        components: [
-          {
-            internalType: 'uint256',
-            name: 'id',
-            type: 'uint256',
-          },
-          {
-            internalType: 'uint256',
-            name: 'listingId',
-            type: 'uint256',
-          },
-          {
-            internalType: 'address',
-            name: 'guest',
-            type: 'address',
-          },
-          {
-            internalType: 'uint256',
-            name: 'checkInDate',
-            type: 'uint256',
-          },
-          {
-            internalType: 'uint256',
-            name: 'checkOutDate',
-            type: 'uint256',
-          },
-          {
-            internalType: 'uint256',
-            name: 'nights',
-            type: 'uint256',
-          },
-          {
-            internalType: 'uint256',
-            name: 'totalPrice',
-            type: 'uint256',
-          },
-          {
-            internalType: 'enum mStay.ReservationStatus',
-            name: 'status',
-            type: 'uint8',
-          },
-        ],
-        internalType: 'struct mStay.Reservation[]',
+        internalType: 'struct MStayCore.Listing[]',
         name: '',
         type: 'tuple[]',
       },
@@ -364,53 +309,50 @@ export const MSTAY_ABI = [
     inputs: [
       {
         internalType: 'uint256',
-        name: '_id',
+        name: '_listingId',
         type: 'uint256',
       },
     ],
-    name: 'getListing',
+    name: 'getListingHost',
     outputs: [
       {
-        components: [
-          {
-            internalType: 'uint256',
-            name: 'id',
-            type: 'uint256',
-          },
-          {
-            internalType: 'address',
-            name: 'host',
-            type: 'address',
-          },
-          {
-            internalType: 'string',
-            name: 'title',
-            type: 'string',
-          },
-          {
-            internalType: 'string',
-            name: 'location',
-            type: 'string',
-          },
-          {
-            internalType: 'string[]',
-            name: 'imageUrls',
-            type: 'string[]',
-          },
-          {
-            internalType: 'uint256',
-            name: 'pricePerNight',
-            type: 'uint256',
-          },
-          {
-            internalType: 'bool',
-            name: 'isActive',
-            type: 'bool',
-          },
-        ],
-        internalType: 'struct mStay.Listing',
+        internalType: 'address',
         name: '',
-        type: 'tuple',
+        type: 'address',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'uint256',
+        name: '_reservationId',
+        type: 'uint256',
+      },
+    ],
+    name: 'getReservationBasic',
+    outputs: [
+      {
+        internalType: 'uint256',
+        name: 'listingId',
+        type: 'uint256',
+      },
+      {
+        internalType: 'address',
+        name: 'guest',
+        type: 'address',
+      },
+      {
+        internalType: 'uint256',
+        name: 'checkOutDate',
+        type: 'uint256',
+      },
+      {
+        internalType: 'uint8',
+        name: 'status',
+        type: 'uint8',
       },
     ],
     stateMutability: 'view',
@@ -439,7 +381,7 @@ export const MSTAY_ABI = [
             type: 'uint256',
           },
           {
-            internalType: 'address',
+            internalType: 'address payable',
             name: 'guest',
             type: 'address',
           },
@@ -464,12 +406,12 @@ export const MSTAY_ABI = [
             type: 'uint256',
           },
           {
-            internalType: 'enum mStay.ReservationStatus',
+            internalType: 'enum MStayCore.ReservationStatus',
             name: 'status',
             type: 'uint8',
           },
         ],
-        internalType: 'struct mStay.Reservation[]',
+        internalType: 'struct MStayCore.Reservation[]',
         name: '',
         type: 'tuple[]',
       },
@@ -500,7 +442,7 @@ export const MSTAY_ABI = [
             type: 'uint256',
           },
           {
-            internalType: 'address',
+            internalType: 'address payable',
             name: 'guest',
             type: 'address',
           },
@@ -525,12 +467,12 @@ export const MSTAY_ABI = [
             type: 'uint256',
           },
           {
-            internalType: 'enum mStay.ReservationStatus',
+            internalType: 'enum MStayCore.ReservationStatus',
             name: 'status',
             type: 'uint8',
           },
         ],
-        internalType: 'struct mStay.Reservation[]',
+        internalType: 'struct MStayCore.Reservation[]',
         name: '',
         type: 'tuple[]',
       },
@@ -596,7 +538,7 @@ export const MSTAY_ABI = [
         type: 'uint256',
       },
       {
-        internalType: 'address',
+        internalType: 'address payable',
         name: 'host',
         type: 'address',
       },
@@ -694,7 +636,7 @@ export const MSTAY_ABI = [
         type: 'uint256',
       },
       {
-        internalType: 'address',
+        internalType: 'address payable',
         name: 'guest',
         type: 'address',
       },
@@ -719,7 +661,7 @@ export const MSTAY_ABI = [
         type: 'uint256',
       },
       {
-        internalType: 'enum mStay.ReservationStatus',
+        internalType: 'enum MStayCore.ReservationStatus',
         name: 'status',
         type: 'uint8',
       },

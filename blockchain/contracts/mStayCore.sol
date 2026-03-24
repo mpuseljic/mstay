@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-contract mStay {
+contract MStayCore {
     uint256 public listingCount;
     uint256 public reservationCount;
 
@@ -15,7 +15,7 @@ contract mStay {
 
     struct Listing {
         uint256 id;
-        address host;
+        address payable host;
         string title;
         string location;
         string[] imageUrls;
@@ -26,7 +26,7 @@ contract mStay {
     struct Reservation {
         uint256 id;
         uint256 listingId;
-        address guest;
+        address payable guest;
         uint256 checkInDate;
         uint256 checkOutDate;
         uint256 nights;
@@ -54,7 +54,6 @@ contract mStay {
         uint256 checkOutDate,
         uint256 nights,
         uint256 totalPrice
-
     );
 
     event ReservationCancelledByGuest(uint256 indexed reservationId);
@@ -77,7 +76,7 @@ contract mStay {
 
         listings[listingCount] = Listing({
             id: listingCount,
-            host: msg.sender,
+            host: payable(msg.sender),
             title: _title,
             location: _location,
             imageUrls: _imageUrls,
@@ -99,36 +98,46 @@ contract mStay {
         uint256 _listingId,
         uint256 _checkInDate,
         uint256 _checkOutDate
-    ) public view returns (bool){
-        require(_listingId > 0 && _listingId <= listingCount, "Listing does not exist.");
-        require(_checkOutDate > _checkInDate, "Invalid dates.");
+    ) public view returns (bool) {
+        require(_listingId > 0 && _listingId <= listingCount, "Listing does not exist");
+        require(_checkOutDate > _checkInDate, "Invalid dates");
 
-        for(uint256 i = 1; i <= reservationCount; i++){
+        for (uint256 i = 1; i <= reservationCount; i++) {
             Reservation memory reservation = reservations[i];
 
-            if(reservation.listingId != _listingId){
-                continue;
-            }
+            if (reservation.listingId != _listingId) continue;
 
-            if(
+            if (
                 reservation.status == ReservationStatus.CancelledByGuest ||
                 reservation.status == ReservationStatus.CancelledByHost ||
                 reservation.status == ReservationStatus.Refunded
-            ){
+            ) {
                 continue;
             }
 
-            bool overlaps = 
-            _checkInDate < reservation.checkOutDate &&
-            _checkOutDate > reservation.checkInDate;
+            bool overlaps =
+                _checkInDate < reservation.checkOutDate &&
+                _checkOutDate > reservation.checkInDate;
 
-            if(overlaps){
-                return false;
-            }
-
-        } 
+            if (overlaps) return false;
+        }
 
         return true;
+    }
+
+    function calculateReservationPrice(
+        uint256 _listingId,
+        uint256 _checkInDate,
+        uint256 _checkOutDate
+    ) public view returns (uint256 nights, uint256 totalPrice) {
+        require(_listingId > 0 && _listingId <= listingCount, "Listing does not exist");
+        require(listings[_listingId].isActive, "Listing is not active");
+        require(_checkOutDate > _checkInDate, "Invalid dates");
+
+        nights = (_checkOutDate - _checkInDate) / 1 days;
+        require(nights > 0, "Reservation must be at least 1 night");
+
+        totalPrice = nights * listings[_listingId].pricePerNight;
     }
 
     function makeReservation(
@@ -140,7 +149,10 @@ contract mStay {
         require(listings[_listingId].isActive, "Listing is not active");
         require(listings[_listingId].host != msg.sender, "Host cannot reserve own listing");
         require(_checkOutDate > _checkInDate, "Invalid dates");
-        require(isDateRangeAvailable(_listingId, _checkInDate, _checkOutDate), "Selected dates are not available");
+        require(
+            isDateRangeAvailable(_listingId, _checkInDate, _checkOutDate),
+            "Selected dates are not available"
+        );
 
         (uint256 nights, uint256 totalPrice) = calculateReservationPrice(
             _listingId,
@@ -155,7 +167,7 @@ contract mStay {
         reservations[reservationCount] = Reservation({
             id: reservationCount,
             listingId: _listingId,
-            guest: msg.sender,
+            guest: payable(msg.sender),
             checkInDate: _checkInDate,
             checkOutDate: _checkOutDate,
             nights: nights,
@@ -174,21 +186,6 @@ contract mStay {
         );
     }
 
-    function calculateReservationPrice(
-    uint256 _listingId,
-    uint256 _checkInDate,
-    uint256 _checkOutDate
-) public view returns (uint256 nights, uint256 totalPrice) {
-    require(_listingId > 0 && _listingId <= listingCount, "Listing does not exist");
-    require(listings[_listingId].isActive, "Listing is not active");
-    require(_checkOutDate > _checkInDate, "Invalid dates");
-
-    nights = (_checkOutDate - _checkInDate) / 1 days;
-    require(nights > 0, "Reservation must be at least 1 night");
-
-    totalPrice = nights * listings[_listingId].pricePerNight;
-}
-
     function cancelReservationByGuest(uint256 _reservationId) public {
         require(_reservationId > 0 && _reservationId <= reservationCount, "Reservation does not exist");
 
@@ -198,7 +195,6 @@ contract mStay {
         require(block.timestamp < reservation.checkInDate, "Cannot cancel after check-in");
 
         reservation.status = ReservationStatus.CancelledByGuest;
-
         uint256 refundAmount = reservation.totalPrice;
         reservation.status = ReservationStatus.Refunded;
 
@@ -219,7 +215,6 @@ contract mStay {
         require(reservation.status == ReservationStatus.Active, "Reservation is not active");
 
         reservation.status = ReservationStatus.CancelledByHost;
-
         uint256 refundAmount = reservation.totalPrice;
         reservation.status = ReservationStatus.Refunded;
 
@@ -241,7 +236,6 @@ contract mStay {
         require(block.timestamp >= reservation.checkInDate, "Payout available after check-in");
 
         reservation.status = ReservationStatus.PaidOut;
-
         uint256 payoutAmount = reservation.totalPrice;
 
         (bool success, ) = listing.host.call{value: payoutAmount}("");
@@ -250,27 +244,11 @@ contract mStay {
         emit PayoutReleased(_reservationId, listing.host, payoutAmount);
     }
 
-    function getListing(uint256 _id) public view returns (Listing memory) {
-        require(_id > 0 && _id <= listingCount, "Listing does not exist");
-        return listings[_id];
-    }
-
-    function getAllListings() public view returns (Listing[] memory){
+    function getAllListings() public view returns (Listing[] memory) {
         Listing[] memory result = new Listing[](listingCount);
 
-        for(uint256 i = 0; i < listingCount; i++){
+        for (uint256 i = 0; i < listingCount; i++) {
             result[i] = listings[i + 1];
-        }
-
-        return result;
-    }
-
-
-function getAllReservations() public view returns (Reservation[] memory) {
-        Reservation[] memory result = new Reservation[](reservationCount);
-
-        for (uint256 i = 0; i < reservationCount; i++) {
-            result[i] = reservations[i + 1];
         }
 
         return result;
@@ -320,5 +298,24 @@ function getAllReservations() public view returns (Reservation[] memory) {
         }
 
         return result;
+    }
+
+    // pomoćne funkcije za Reviews contract
+    function getReservationBasic(uint256 _reservationId)
+        external
+        view
+        returns (
+            uint256 listingId,
+            address guest,
+            uint256 checkOutDate,
+            uint8 status
+        )
+    {
+        Reservation memory r = reservations[_reservationId];
+        return (r.listingId, r.guest, r.checkOutDate, uint8(r.status));
+    }
+
+    function getListingHost(uint256 _listingId) external view returns (address) {
+        return listings[_listingId].host;
     }
 }

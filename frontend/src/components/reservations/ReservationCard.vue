@@ -12,6 +12,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  reviewedLabel: {
+    type: String,
+    default: '',
+  },
 })
 
 const emit = defineEmits([
@@ -120,6 +124,8 @@ function shortenAddress(address) {
         >
           Ocijeni gosta
         </button>
+
+        <span v-if="reviewedLabel" class="review-badge"> {{ reviewedLabel }}</span>
       </template>
     </div>
   </article>
@@ -201,5 +207,17 @@ function shortenAddress(address) {
 .badge--active {
   background: #fff7ed;
   color: #c2410c;
+}
+
+.review-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 10px 14px;
+  background: #ecfdf3;
+  color: #166534;
+  font-size: 0.88rem;
+  font-weight: 700;
+  border: 1px solid #bbf7d0;
 }
 </style>

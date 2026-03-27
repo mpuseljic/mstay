@@ -206,6 +206,7 @@ watch(
           :reservation="reservation"
           mode="guest"
           :can-review="canReviewReservation(reservation)"
+          :reviewed-label="guestReviewStatus[reservation.id] ? 'Domaćin ocijenjen' : ''"
           @guest-cancel="handleGuestCancel"
           @guest-review="openGuestReviewForm"
         />

@@ -210,6 +210,7 @@ watch(
           :reservation="reservation"
           mode="host"
           :can-review="canReviewReservation(reservation)"
+          :reviewed-label="hostReviewStatus[reservation.id] ? 'Gost ocijenjen' : ''"
           @host-cancel="handleHostCancel"
           @host-payout="handleHostPayout"
           @host-review="openHostReviewForm"

@@ -133,3 +133,13 @@ export async function fetchReviewsForUser(userAddress) {
 export function fromWeiToEth(value) {
   return formatEther(value)
 }
+
+export async function hasGuestLeftReview(reservationId) {
+  const contract = await getMStayReviewsContract(false)
+  return await contract.guestReviewLeft(reservationId)
+}
+
+export async function hasHostLeftReview(reservationId) {
+  const contract = await getMStayReviewsContract(false)
+  return await contract.hostReviewLeft(reservationId)
+}

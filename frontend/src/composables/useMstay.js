@@ -15,6 +15,8 @@ import {
   checkDateAvailability,
   leaveReview,
   fetchReviewsForUser,
+  hasGuestLeftReview,
+  hasHostLeftReview,
 } from '../services/web3'
 
 const walletAddress = ref('')
@@ -169,5 +171,7 @@ export function useMstay() {
     calculateReservationPrice,
     checkDateAvailability,
     leaveReview,
+    hasGuestLeftReview,
+    hasHostLeftReview,
   }
 }

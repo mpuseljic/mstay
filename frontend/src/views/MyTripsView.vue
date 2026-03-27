@@ -1,10 +1,11 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import AppNavbar from '../components/layout/AppNavbar.vue'
 import AppFooter from '../components/layout/AppFooter.vue'
 import ReservationCard from '../components/reservations/ReservationCard.vue'
 import { useMstay } from '../composables/useMstay'
+import { hasGuestLeftReview } from '@/services/web3'
 
 const {
   walletAddress,
@@ -25,6 +26,8 @@ const reviewForm = ref({
 
 const reviewMessage = ref('')
 const reviewError = ref('')
+const guestReviewStatus = ref([])
+const guestReviewsStatusLoading = ref(true)
 
 const activeTripsCount = computed(() => {
   return myReservations.value.filter((reservation) => reservation.status === '0').length
@@ -37,8 +40,11 @@ const pastTripsCount = computed(() => {
 })
 
 function canReviewReservation(reservation) {
+  if (guestReviewsStatusLoading.value) return false
+
   const now = Math.floor(Date.now() / 1000)
-  return now >= reservation.checkOutTimestamp
+  const alreadyReviewed = guestReviewStatus.value[reservation.id] === true
+  return now >= reservation.checkOutTimestamp && !alreadyReviewed
 }
 
 async function handleGuestCancel(id) {
@@ -69,17 +75,74 @@ async function handleGuestReview() {
     )
 
     reviewMessage.value = 'Recenzija za domaćina je uspješno spremljena.'
+
+    guestReviewStatus.value[reviewForm.value.reservationId] = true
+
+    reviewForm.value = {
+      reservationId: '',
+      rating: 5,
+      comment: '',
+    }
+
     await loadMyReservations()
   } catch (err) {
     reviewError.value = err.message || 'Greška pri spremanju recenzije.'
   }
 }
 
+async function loadGuestReviewStatuses() {
+  guestReviewsStatusLoading.value = true
+  const result = []
+
+  for (const reservation of myReservations.value) {
+    try {
+      const alreadyLeft = await hasGuestLeftReview(Number(reservation.id))
+      result[reservation.id] = alreadyLeft
+    } catch {
+      result[reservation.id] = false
+    }
+  }
+
+  guestReviewStatus.value = result
+  guestReviewsStatusLoading.value = false
+}
+
+watch(
+  () => walletAddress.value,
+  async (newWallet) => {
+    if (newWallet) {
+      await loadMyReservations()
+      await loadGuestReviewStatuses()
+    } else {
+      myReservations.value = []
+      guestReviewStatus.value = {}
+      guestReviewStatusLoading.value = false
+    }
+  },
+  { immediate: true },
+)
+
 onMounted(async () => {
   if (walletAddress.value) {
     await loadMyReservations()
+    await loadGuestReviewStatuses()
+  } else {
+    guestReviewsStatusLoading.value = false
   }
 })
+
+watch(
+  () => myReservations.value,
+  async () => {
+    if (myReservations.value.length) {
+      await loadGuestReviewStatuses()
+    } else {
+      guestReviewStatus.value = {}
+      guestReviewsStatusLoading.value = false
+    }
+  },
+  { deep: true },
+)
 </script>
 
 <template>

@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import AppNavbar from '../components/layout/AppNavbar.vue'
 import AppFooter from '../components/layout/AppFooter.vue'
@@ -16,6 +16,7 @@ const {
   cancelReservationByHost,
   releasePayout,
   leaveReview,
+  hasHostLeftReview,
 } = useMstay()
 
 const reviewForm = ref({
@@ -26,6 +27,8 @@ const reviewForm = ref({
 
 const reviewMessage = ref('')
 const reviewError = ref('')
+const hostReviewStatus = ref([])
+const hostReviewStatusLoading = ref(true)
 
 const activeHostingReservations = computed(() => {
   return hostReservations.value.filter((reservation) => reservation.status === '0').length
@@ -38,8 +41,10 @@ const closedHostingReservations = computed(() => {
 })
 
 function canReviewReservation(reservation) {
+  if (hostReviewStatusLoading.value) return false
   const now = Math.floor(Date.now() / 1000)
-  return now >= reservation.checkOutTimestamp
+  const alreadyReviewed = hostReviewStatus.value[reservation.id] === true
+  return now >= reservation.checkOutTimestamp && !alreadyReviewed
 }
 
 async function handleHostCancel(id) {
@@ -75,17 +80,72 @@ async function handleHostReview() {
     )
 
     reviewMessage.value = 'Recenzija za gosta je uspješno spremljena.'
+
+    hostReviewStatus.value[reviewForm.value.reservationId] = true
+    reviewForm.value = {
+      reservationId: '',
+      rating: 5,
+      comment: '',
+    }
+
     await loadHostReservations()
   } catch (err) {
     reviewError.value = err.message || 'Greška pri spremanju recenzije.'
   }
 }
 
+async function loadHostReviewStatuses() {
+  hostReviewStatusLoading.value = true
+  const result = {}
+
+  for (const reservation of hostReservations.value) {
+    try {
+      const alreadyLeft = await hasHostLeftReview(Number(reservation.id))
+      result[reservation.id] = alreadyLeft
+    } catch {
+      result[reservation.id] = false
+    }
+  }
+  hostReviewStatus.value = result
+  hostReviewStatusLoading.value = false
+}
+
+watch(
+  () => walletAddress.value,
+  async (newWallet) => {
+    if (newWallet) {
+      await loadHostReservations()
+      await loadHostReviewStatuses()
+    } else {
+      hostReservations.value = []
+      hostReviewStatus.value = {}
+      hostReviewStatusLoading.value = false
+    }
+  },
+  { immediate: true },
+)
+
 onMounted(async () => {
   if (walletAddress.value) {
     await loadHostReservations()
+    await loadHostReviewStatuses()
+  } else {
+    hostReviewStatusLoading.value = false
   }
 })
+
+watch(
+  () => hostReservations.value,
+  async () => {
+    if (hostReservations.value.length) {
+      await loadHostReservations()
+    } else {
+      hostReservations.value = {}
+      hostReviewStatusLoading.value = false
+    }
+  },
+  { deep: true },
+)
 </script>
 
 <template>

@@ -5,6 +5,7 @@ import AppNavbar from '../components/layout/AppNavbar.vue'
 import { useMstay } from '../composables/useMstay'
 import AppFooter from '@/components/layout/AppFooter.vue'
 import ReviewCard from '@/components/reviews/ReviewCard.vue'
+import { start } from '@popperjs/core'
 
 const route = useRoute()
 
@@ -19,6 +20,7 @@ const {
   calculateReservationPrice,
   checkDateAvailability,
   loadReviewsForUser,
+  fetchReservationsByListing,
 } = useMstay()
 
 const listing = ref(null)
@@ -35,6 +37,14 @@ const reservationForm = ref({
   checkIn: '',
   checkOut: '',
 })
+
+const selectedRange = ref({
+  start: null,
+  end: null,
+})
+
+const listingReservations = ref([])
+const isCalendarOpen = ref(false)
 
 const reservationNights = computed(() => {
   if (!reservationForm.value.checkIn || !reservationForm.value.checkOut) return 0
@@ -83,6 +93,20 @@ async function loadCurrentListing() {
   await loadListings()
 
   listing.value = listings.value.find((item) => item.id === String(route.params.id)) || null
+
+  if (listing.value?.id) {
+    const reservationData = await fetchReservationsByListing(Number(listing.value.id))
+    listingReservations.value = reservationData.map((item) => ({
+      id: item.id.toString(),
+      listingId: item.listingId.toString(),
+      guest: item.guest,
+      checkInTimestamp: Number(item.checkInDate),
+      checkOutTimestamp: Number(item.checkOutDate),
+      status: item.status.toString(),
+    }))
+  }
+
+  console.log('listingReservations', listingReservations.value)
 
   if (listing.value?.host) {
     reviews.value = await loadReviewsForUser(listing.value.host)
@@ -183,6 +207,112 @@ function handleKeydown(event) {
     showNextImage()
   }
 }
+
+function startOfDay(date) {
+  const d = new Date(date)
+  d.setHours(0, 0, 0, 0)
+  return d
+}
+
+function endOfDay(date) {
+  const d = new Date(date)
+  d.setHours(23, 59, 59, 999)
+  return d
+}
+
+function todayStart() {
+  return startOfDay(new Date())
+}
+
+function yesterdayEnd() {
+  const d = new Date()
+  d.setDate(d.getDate() - 1)
+  return endOfDay(d)
+}
+
+function toDateFromUnix(unixSeconds) {
+  return new Date(Number(unixSeconds) * 1000)
+}
+
+function formatDateForInput(date) {
+  const d = new Date(date)
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+function formatDateForDisplay(dateString) {
+  if (!dateString) return ''
+
+  const d = new Date(dateString)
+  return d.toLocaleDateString('hr-HR')
+}
+
+function clearSelectedDates() {
+  selectedRange.value = { start: null, end: null }
+  ;((reservationForm.value.checkIn = ''),
+    (reservationForm.value.checkOut = ''),
+    (reservationPricePreview.value = '0'))
+}
+
+const bookedRanges = computed(() => {
+  return listingReservations.value
+    .filter((reservation) => ['0', '3'].includes(reservation.status))
+    .map((reservation) => ({
+      start: startOfDay(toDateFromUnix(reservation.checkInTimestamp)),
+      end: startOfDay(toDateFromUnix(reservation.checkOutTimestamp)),
+    }))
+})
+
+const calendarAttributes = computed(() => {
+  const attrs = [
+    {
+      key: 'past-dates',
+      dates: { end: yesterdayEnd() },
+      customData: { type: 'past' },
+      content: { class: 'is-crossed' },
+    },
+  ]
+
+  bookedRanges.value.forEach((range, index) => {
+    attrs.push({
+      key: `booked-${index}`,
+      dates: {
+        start: startOfDay(range.start),
+        end: startOfDay(range.end),
+      },
+      customData: { type: 'booked' },
+      content: { class: 'is-crossed booked' },
+    })
+  })
+
+  return attrs
+})
+
+const disabledDates = computed(() => {
+  return [{ end: yesterdayEnd() }, ...bookedRanges.value]
+})
+
+watch(
+  () => selectedRange.value,
+  async (range) => {
+    if (!range?.start || !range?.end) {
+      reservationForm.value.checkIn = ''
+      reservationForm.value.checkOut = ''
+      reservationPricePreview.value = '0'
+      return
+    }
+
+    reservationForm.value.checkIn = formatDateForInput(range.start)
+    reservationForm.value.checkOut = formatDateForInput(range.end)
+
+    await updateReservationPreview()
+
+    isCalendarOpen.value = false
+  },
+  { deep: true },
+)
 
 onMounted(() => {
   window.addEventListener('keydown', handleKeydown)
@@ -359,23 +489,27 @@ onMounted(async () => {
               <span>/ noć</span>
             </div>
 
-            <div class="form-group">
-              <label>Check-in</label>
-              <input
-                v-model="reservationForm.checkIn"
-                type="date"
-                @change="updateReservationPreview"
-              />
+            <div class="booking-date-box" @click="isCalendarOpen = true">
+              <div class="booking-date-cell">
+                <span class="booking-label">DOLAZAK</span>
+                <strong>{{
+                  reservationForm.checkIn
+                    ? formatDateForDisplay(reservationForm.checkIn)
+                    : 'Dodaj datum'
+                }}</strong>
+              </div>
+
+              <div class="booking-date-cell">
+                <span class="booking-label">ODLAZAK</span>
+                <strong>{{
+                  reservationForm.checkOut
+                    ? formatDateForDisplay(reservationForm.checkOut)
+                    : 'Dodaj datum'
+                }}</strong>
+              </div>
             </div>
 
-            <div class="form-group">
-              <label>Check-out</label>
-              <input
-                v-model="reservationForm.checkOut"
-                type="date"
-                @change="updateReservationPreview"
-              />
-            </div>
+            <div class="booking-info-strip">Besplatno otkazivanje do 48h prije dolaska</div>
 
             <div v-if="reservationNights > 0" class="preview">
               <div class="preview-row">
@@ -399,7 +533,13 @@ onMounted(async () => {
             <button
               class="book-btn"
               @click="handleReservation"
-              :disabled="isBooking || isOwnListing || !listing.isActive"
+              :disabled="
+                isBooking ||
+                isOwnListing ||
+                !listing.isActive ||
+                !reservationForm.checkIn ||
+                !reservationForm.checkOut
+              "
             >
               {{
                 isOwnListing ? 'Vlastiti oglas' : isBooking ? 'Slanje transakcije...' : 'Rezerviraj'
@@ -407,6 +547,64 @@ onMounted(async () => {
             </button>
 
             <p class="booking-note">Sredstva se drže u escrowu do trenutka isplate domaćinu.</p>
+          </div>
+
+          <div v-if="isCalendarOpen" class="calendar-modal" @click.self="isCalendarOpen = false">
+            <div class="calendar-modal__dialog">
+              <div class="calendar-modal__top">
+                <div>
+                  <h3>
+                    {{ reservationNights > 0 ? `${reservationNights} noćenja` : 'Odaberi datume' }}
+                  </h3>
+                  <p>
+                    {{
+                      reservationForm.checkIn && reservationForm.checkOut
+                        ? `${formatDateForDisplay(reservationForm.checkIn)} - ${formatDateForDisplay(reservationForm.checkOut)}`
+                        : 'Odaberi dolazak i odlazak'
+                    }}
+                  </p>
+                </div>
+
+                <button class="calendar-close" @click="isCalendarOpen = false">✕</button>
+              </div>
+
+              <div class="calendar-modal__inputs">
+                <div class="calendar-input-box">
+                  <span>DOLAZAK</span>
+                  <strong>{{
+                    reservationForm.checkIn
+                      ? formatDateForDisplay(reservationForm.checkIn)
+                      : 'Dodaj datum'
+                  }}</strong>
+                </div>
+
+                <div class="calendar-input-box">
+                  <span>ODLAZAK</span>
+                  <strong>{{
+                    reservationForm.checkOut
+                      ? formatDateForDisplay(reservationForm.checkOut)
+                      : 'Dodaj datum'
+                  }}</strong>
+                </div>
+              </div>
+
+              <VDatePicker
+                v-model.range="selectedRange"
+                :attributes="calendarAttributes"
+                :disabled-dates="disabledDates"
+                :min-date="todayStart()"
+                :columns="2"
+                borderless
+                transparent
+                expanded
+              />
+
+              <div class="calendar-modal__footer">
+                <button class="calendar-clear" @click="clearSelectedDates">Izbriši datume</button>
+
+                <button class="calendar-done" @click="isCalendarOpen = false">Zatvori</button>
+              </div>
+            </div>
           </div>
         </aside>
       </section>
@@ -867,6 +1065,198 @@ input {
   background: #ecfdf3;
   border: 1px solid #bbf7d0;
   color: #166534;
+}
+
+.booking-date-box {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border: 1px solid #bdbdbd;
+  border-radius: 18px;
+  overflow: hidden;
+  margin-bottom: 14px;
+  cursor: pointer;
+  background: #fff;
+}
+
+.booking-date-cell {
+  padding: 14px 16px;
+  min-height: 78px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.booking-date-cell + .booking-date-cell {
+  border-left: 1px solid #d4d4d4;
+}
+
+.booking-label {
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: #111827;
+  margin-bottom: 4px;
+}
+
+.booking-info-strip {
+  background: #f5f5f5;
+  border-radius: 14px;
+  padding: 12px 14px;
+  color: #374151;
+  font-size: 0.93rem;
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.calendar-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 24, 39, 0.35);
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.calendar-modal__dialog {
+  width: min(1120px, 100%);
+  background: #fff;
+  border-radius: 28px;
+  padding: 28px;
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.18);
+}
+
+.calendar-modal__top {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.calendar-modal__top h3 {
+  margin: 0 0 6px;
+  font-size: 2rem;
+}
+
+.calendar-modal__top p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 1rem;
+}
+
+.calendar-close {
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  background: #fff;
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+
+.calendar-modal__inputs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  border: 1px solid #bdbdbd;
+  border-radius: 18px;
+  overflow: hidden;
+  margin-bottom: 20px;
+  max-width: 620px;
+}
+
+.calendar-input-box {
+  padding: 14px 16px;
+  min-height: 78px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: #fff;
+}
+
+.calendar-input-box + .calendar-input-box {
+  border-left: 1px solid #d4d4d4;
+}
+
+.calendar-input-box span {
+  font-size: 0.78rem;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+
+.calendar-modal__footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 18px;
+}
+
+.calendar-clear {
+  border: 0;
+  background: transparent;
+  text-decoration: underline;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.calendar-done {
+  border: 0;
+  border-radius: 14px;
+  padding: 12px 18px;
+  background: #111827;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+:deep(.vc-day-content.is-crossed) {
+  color: #b8b8b8 !important;
+  text-decoration: line-through !important;
+}
+
+:deep(.vc-day-content.is-crossed.booked) {
+  color: #9ca3af !important;
+  text-decoration: line-through !important;
+}
+
+:deep(.vc-day.is-disabled .vc-day-content.is-crossed) {
+  opacity: 1 !important;
+}
+
+:deep(.vc-day.is-disabled) {
+  opacity: 1 !important;
+}
+
+:deep(.vc-day-content) {
+  font-weight: 600;
+  border-radius: 999px;
+}
+
+:deep(.vc-highlight) {
+  background: rgba(255, 56, 92, 0.14) !important;
+}
+
+:deep(.vc-highlight-content-solid) {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark)) !important;
+  color: #fff !important;
+}
+
+:deep(.vc-container) {
+  width: 100%;
+  border: 0;
+  background: #fff;
+}
+
+:deep(.vc-pane-layout) {
+  gap: 28px;
+}
+
+:deep(.vc-weekday) {
+  color: #6b7280;
+  font-weight: 600;
+  margin-bottom: 8px;
 }
 
 @media (max-width: 768px) {

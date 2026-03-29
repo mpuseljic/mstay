@@ -18,6 +18,7 @@ import {
   hasGuestLeftReview,
   hasHostLeftReview,
   fetchReviewSummaryForUser,
+  fetchReservationsByListing,
 } from '../services/web3'
 
 const walletAddress = ref('')
@@ -195,5 +196,6 @@ export function useMstay() {
     hasGuestLeftReview,
     hasHostLeftReview,
     fetchReviewSummaryForUser,
+    fetchReservationsByListing,
   }
 }

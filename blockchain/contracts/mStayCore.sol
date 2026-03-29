@@ -318,4 +318,26 @@ contract MStayCore {
     function getListingHost(uint256 _listingId) external view returns (address) {
         return listings[_listingId].host;
     }
+
+    function getReservationsByListing(uint256 _listingId) public view returns (Reservation[] memory) {
+    uint256 count = 0;
+
+    for (uint256 i = 1; i <= reservationCount; i++) {
+        if (reservations[i].listingId == _listingId) {
+            count++;
+        }
+    }
+
+    Reservation[] memory result = new Reservation[](count);
+    uint256 index = 0;
+
+    for (uint256 i = 1; i <= reservationCount; i++) {
+        if (reservations[i].listingId == _listingId) {
+            result[index] = reservations[i];
+            index++;
+        }
+    }
+
+    return result;
+}
 }

@@ -487,6 +487,67 @@ export const MSTAY_CORE_ABI = [
         name: '_listingId',
         type: 'uint256',
       },
+    ],
+    name: 'getReservationsByListing',
+    outputs: [
+      {
+        components: [
+          {
+            internalType: 'uint256',
+            name: 'id',
+            type: 'uint256',
+          },
+          {
+            internalType: 'uint256',
+            name: 'listingId',
+            type: 'uint256',
+          },
+          {
+            internalType: 'address payable',
+            name: 'guest',
+            type: 'address',
+          },
+          {
+            internalType: 'uint256',
+            name: 'checkInDate',
+            type: 'uint256',
+          },
+          {
+            internalType: 'uint256',
+            name: 'checkOutDate',
+            type: 'uint256',
+          },
+          {
+            internalType: 'uint256',
+            name: 'nights',
+            type: 'uint256',
+          },
+          {
+            internalType: 'uint256',
+            name: 'totalPrice',
+            type: 'uint256',
+          },
+          {
+            internalType: 'enum MStayCore.ReservationStatus',
+            name: 'status',
+            type: 'uint8',
+          },
+        ],
+        internalType: 'struct MStayCore.Reservation[]',
+        name: '',
+        type: 'tuple[]',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'uint256',
+        name: '_listingId',
+        type: 'uint256',
+      },
       {
         internalType: 'uint256',
         name: '_checkInDate',

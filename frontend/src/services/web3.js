@@ -148,3 +148,8 @@ export async function fetchReviewSummaryForUser(userAddress) {
   const contract = await getMStayReviewsContract(false)
   return await contract.getReviewSummaryForUser(userAddress)
 }
+
+export async function fetchReservationsByListing(listingId) {
+  const contract = await getMStayCoreContract(false)
+  return await contract.getReservationsByListing(listingId)
+}

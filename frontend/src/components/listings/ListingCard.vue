@@ -58,6 +58,16 @@ function shortenAddress(address) {
         </span>
       </div>
 
+      <div class="rating-row" v-if="listing.totalReviews > 0">
+        <span class="rating-star">★</span>
+        <span class="rating-value">{{ listing.averageRating.toFixed(1) }}</span>
+        <span class="rating-count">({{ listing.totalReviews }} recenzija)</span>
+      </div>
+
+      <div class="rating-row rating-row--muted" v-else>
+        <span class="rating-count">Još nema recenzija</span>
+      </div>
+
       <div class="meta">
         <div class="meta__item">
           <span>ID</span>
@@ -209,5 +219,31 @@ function shortenAddress(address) {
 .badge--muted {
   background: #f3f4f6;
   color: #6b7280;
+}
+
+.rating-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.rating-row--muted {
+  color: var(--muted);
+}
+
+.rating-star {
+  color: #f59e0b;
+  font-size: 0.95rem;
+}
+
+.rating-value {
+  font-weight: 800;
+  color: #111827;
+}
+
+.rating-count {
+  color: var(--muted);
+  font-size: 0.92rem;
 }
 </style>

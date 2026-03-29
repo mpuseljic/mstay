@@ -116,7 +116,7 @@ watch(
     } else {
       myReservations.value = []
       guestReviewStatus.value = {}
-      guestReviewStatusLoading.value = false
+      guestReviewsStatusLoading.value = false
     }
   },
   { immediate: true },

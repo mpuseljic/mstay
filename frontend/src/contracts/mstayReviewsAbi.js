@@ -80,6 +80,30 @@ export const MSTAY_REVIEWS_ABI = [
         type: 'address',
       },
     ],
+    name: 'getReviewSummaryForUser',
+    outputs: [
+      {
+        internalType: 'uint256',
+        name: 'averageRatingScaled',
+        type: 'uint256',
+      },
+      {
+        internalType: 'uint256',
+        name: 'totalReviews',
+        type: 'uint256',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'address',
+        name: '_user',
+        type: 'address',
+      },
+    ],
     name: 'getReviewsForUser',
     outputs: [
       {

@@ -143,3 +143,8 @@ export async function hasHostLeftReview(reservationId) {
   const contract = await getMStayReviewsContract(false)
   return await contract.hostReviewLeft(reservationId)
 }
+
+export async function fetchReviewSummaryForUser(userAddress) {
+  const contract = await getMStayReviewsContract(false)
+  return await contract.getReviewSummaryForUser(userAddress)
+}

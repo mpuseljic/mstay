@@ -128,4 +128,27 @@ contract MStayReviews {
 
         return result;
     }
+
+    function getReviewSummaryForUser(address _user)
+    public
+    view
+    returns (uint256 averageRatingScaled, uint256 totalReviews)
+{
+    uint256 sum = 0;
+    uint256 count = 0;
+
+    for (uint256 i = 1; i <= reviewCount; i++) {
+        if (reviews[i].reviewedUser == _user) {
+            sum += reviews[i].rating;
+            count++;
+        }
+    }
+
+    if (count == 0) {
+        return (0, 0);
+    }
+
+    averageRatingScaled = (sum * 10) / count;
+    totalReviews = count;
+}
 }

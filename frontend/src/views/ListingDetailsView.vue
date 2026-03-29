@@ -218,6 +218,16 @@ onMounted(async () => {
           <p>{{ listing.location }}</p>
         </div>
 
+        <div class="details-rating" v-if="listing.totalReviews > 0">
+          <span class="details-rating__star">★</span>
+          <strong>{{ listing.averageRating.toFixed(1) }}</strong>
+          <span>{{ listing.totalReviews }} recenzija</span>
+        </div>
+
+        <div class="details-rating details-rating--muted" v-else>
+          <span>Još nema recenzija</span>
+        </div>
+
         <div class="head-badges">
           <span :class="['badge', listing.isActive ? 'badge--success' : 'badge--muted']">
             {{ listing.isActive ? 'Aktivan' : 'Neaktivan' }}
@@ -912,5 +922,25 @@ input {
   .gallery__side {
     grid-template-columns: 1fr;
   }
+}
+
+.details-rating {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  color: #374151;
+}
+
+.details-rating strong {
+  font-size: 1rem;
+}
+
+.details-rating__star {
+  color: #f59e0b;
+}
+
+.details-rating--muted {
+  color: var(--muted);
 }
 </style>

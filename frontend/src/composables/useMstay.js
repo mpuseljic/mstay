@@ -17,6 +17,7 @@ import {
   fetchReviewsForUser,
   hasGuestLeftReview,
   hasHostLeftReview,
+  fetchReviewSummaryForUser,
 } from '../services/web3'
 
 const walletAddress = ref('')
@@ -67,16 +68,36 @@ async function loadListings() {
   try {
     const data = await fetchAllListings()
 
-    listings.value = data.map((item) => ({
-      id: item.id.toString(),
-      host: item.host,
-      title: item.title,
-      location: item.location,
-      imageUrls: item.imageUrls || [],
-      imageUrl: item.imageUrls?.[0] || '',
-      pricePerNight: fromWeiToEth(item.pricePerNight),
-      isActive: item.isActive,
-    }))
+    const mappedListings = await Promise.all(
+      data.map(async (item) => {
+        let averageRating = 0
+        let totalReviews = 0
+
+        try {
+          const [averageRatingScaled, reviewCount] = await fetchReviewSummaryForUser(item.host)
+          averageRating = Number(averageRatingScaled) / 10
+          totalReviews = Number(reviewCount)
+        } catch {
+          averageRating = 0
+          totalReviews = 0
+        }
+
+        return {
+          id: item.id.toString(),
+          host: item.host,
+          title: item.title,
+          location: item.location,
+          imageUrls: item.imageUrls || [],
+          imageUrl: item.imageUrls?.[0] || '',
+          pricePerNight: fromWeiToEth(item.pricePerNight),
+          isActive: item.isActive,
+          averageRating,
+          totalReviews,
+        }
+      }),
+    )
+
+    listings.value = mappedListings
   } catch (err) {
     errorMsg.value = err.message || 'Greška pri dohvaćanju oglasa.'
   }
@@ -173,5 +194,6 @@ export function useMstay() {
     leaveReview,
     hasGuestLeftReview,
     hasHostLeftReview,
+    fetchReviewSummaryForUser,
   }
 }

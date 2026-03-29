@@ -50,12 +50,42 @@ const hostingListingStats = computed(() => {
       (reservation) => reservation.status === '0',
     ).length
 
+    const earned = relatedReservations
+      .filter((reservation) => reservation.status === '3')
+      .reduce((sum, reservation) => sum + Number(reservation.totalPrice || 0), 0)
+
+    const pending = relatedReservations
+      .filter((reservation) => reservation.status === '0')
+      .reduce((sum, reservation) => sum + Number(reservation.totalPrice || 0), 0)
+
     return {
       ...listing,
       reservationsCount: relatedReservations.length,
       activeReservationsCount: activeReservations,
+      earned,
+      pending,
     }
   })
+})
+
+const totalListingsCount = computed(() => {
+  return myListings.value.length
+})
+
+const totalReservationsCount = computed(() => {
+  return hostReservations.value.length
+})
+
+const totalEarned = computed(() => {
+  return hostReservations.value
+    .filter((reservation) => reservation.status === '3')
+    .reduce((sum, reservation) => sum + Number(reservation.totalPrice || 0), 0)
+})
+
+const pendingEarnings = computed(() => {
+  return hostReservations.value
+    .filter((reservation) => reservation.status === '0')
+    .reduce((sum, reservation) => sum + Number(reservation.totalPrice || 0), 0)
 })
 
 const activeHostingReservations = computed(() => {
@@ -195,13 +225,23 @@ watch(
 
         <div class="hero__stats">
           <div class="stat-card">
-            <span class="stat-label">Aktivne host rezervacije</span>
-            <strong class="stat-value">{{ activeHostingReservations }}</strong>
+            <span class="stat-label">Moji oglasi</span>
+            <strong class="stat-value">{{ totalListingsCount }}</strong>
           </div>
 
           <div class="stat-card">
-            <span class="stat-label">Zatvorene / obrađene</span>
-            <strong class="stat-value">{{ closedHostingReservations }}</strong>
+            <span class="stat-label">Ukupno rezervacija</span>
+            <strong class="stat-value">{{ totalReservationsCount }}</strong>
+          </div>
+
+          <div class="stat-card">
+            <span class="stat-label">Ukupno zarađeno</span>
+            <strong class="stat-value">{{ totalEarned.toFixed(2) }} ETH</strong>
+          </div>
+
+          <div class="stat-card">
+            <span class="stat-label">Pending earnings</span>
+            <strong class="stat-value">{{ pendingEarnings.toFixed(2) }} ETH</strong>
           </div>
         </div>
       </section>
@@ -280,6 +320,23 @@ watch(
               <div class="host-listing-stat">
                 <span>Aktivne rezervacije</span>
                 <strong>{{ listing.activeReservationsCount }}</strong>
+              </div>
+
+              <div class="host-listing-stat">
+                <span>Zarađeno</span>
+                <strong>{{ listing.earned.toFixed(2) }} ETH</strong>
+              </div>
+
+              <div class="host-listing-stat">
+                <span>Pending</span>
+                <strong>{{ listing.pending.toFixed(2) }} ETH</strong>
+              </div>
+
+              <div class="host-listing-stat">
+                <span>Ocjena</span>
+                <strong>
+                  {{ listing.totalReviews > 0 ? `${listing.averageRating.toFixed(1)} ★` : '—' }}
+                </strong>
               </div>
             </div>
 
@@ -676,6 +733,42 @@ textarea {
 
 .empty-state--compact {
   margin-bottom: 28px;
+}
+
+@media (max-width: 1100px) {
+  .hero,
+  .reservation-grid,
+  .host-listing-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .section-head {
+    flex-direction: column;
+    align-items: start;
+  }
+
+  .hero__stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .page {
+    padding: 24px 14px 42px;
+  }
+
+  .hero {
+    padding: 24px;
+  }
+
+  .hero__copy h1 {
+    font-size: 2rem;
+  }
+
+  .hero__stats,
+  .host-listing-stats {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 1100px) {

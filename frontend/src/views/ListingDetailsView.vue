@@ -33,6 +33,8 @@ const bookingError = ref('')
 const bookingSuccess = ref('')
 const reviews = ref([])
 
+const isCheckoutOpen = ref(false)
+
 const reservationForm = ref({
   checkIn: '',
   checkOut: '',
@@ -135,7 +137,16 @@ async function updateReservationPreview() {
   }
 }
 
-async function handleReservation() {
+function handleReservation() {
+  if (!walletAddress.value || !listing.value) return
+  if (!reservationForm.value.checkIn || !reservationForm.value.checkOut) return
+
+  bookingError.value = ''
+  bookingSuccess.value = ''
+  isCheckoutOpen.value = true
+}
+
+async function confirmReservation() {
   if (!walletAddress.value || !listing.value) return
 
   bookingError.value = ''
@@ -152,6 +163,7 @@ async function handleReservation() {
     if (!isAvailable) {
       bookingError.value = 'Odabrani datumi nisu dostupni za ovaj smještaj. Odaberi drugi termin.'
       bookingSuccess.value = ''
+      isCheckoutOpen.value = false
       return
     }
 
@@ -163,10 +175,26 @@ async function handleReservation() {
     reservationForm.value.checkIn = ''
     reservationForm.value.checkOut = ''
     reservationPricePreview.value = '0'
+    selectedRange.value = { start: null, end: null }
+    isCheckoutOpen.value = false
+
+    await loadCurrentListing()
   } finally {
     isBooking.value = false
   }
 }
+
+const checkoutSummary = computed(() => {
+  return {
+    title: listing.value?.title || '',
+    location: listing.value?.location || '',
+    pricePerNight: listing.value?.pricePerNight || '0',
+    checkIn: reservationForm.value.checkIn,
+    checkOut: reservationForm.value.checkOut,
+    nights: reservationNights.value,
+    total: reservationPricePreview.value || '0',
+  }
+})
 
 function setActiveImage(image) {
   activeImage.value = image
@@ -622,6 +650,80 @@ onMounted(async () => {
           </div>
         </aside>
       </section>
+
+      <div v-if="isCheckoutOpen" class="checkout-modal" @click.self="isCheckoutOpen = false">
+        <div class="checkout-modal__dialog">
+          <div class="checkout-modal__top">
+            <div>
+              <h3>Potvrda rezervacije</h3>
+              <p>Pregledaj detalje prije slanja blockchain transakcije.</p>
+            </div>
+
+            <button class="checkout-close" @click="isCheckoutOpen = false">✕</button>
+          </div>
+
+          <div class="checkout-summary">
+            <div class="checkout-summary__image">
+              <img
+                v-if="listing.imageUrl"
+                :src="listing.imageUrl"
+                :alt="listing.title"
+                class="checkout-summary__img"
+              />
+              <div v-else class="checkout-summary__placeholder">mStay</div>
+            </div>
+
+            <div class="checkout-summary__body">
+              <h4>{{ checkoutSummary.title }}</h4>
+              <p class="checkout-summary__location">{{ checkoutSummary.location }}</p>
+
+              <div class="checkout-summary__grid">
+                <div class="checkout-item">
+                  <span>Dolazak</span>
+                  <strong>{{ formatDateForDisplay(checkoutSummary.checkIn) }}</strong>
+                </div>
+
+                <div class="checkout-item">
+                  <span>Odlazak</span>
+                  <strong>{{ formatDateForDisplay(checkoutSummary.checkOut) }}</strong>
+                </div>
+
+                <div class="checkout-item">
+                  <span>Noćenja</span>
+                  <strong>{{ checkoutSummary.nights }}</strong>
+                </div>
+
+                <div class="checkout-item">
+                  <span>Cijena / noć</span>
+                  <strong>{{ checkoutSummary.pricePerNight }} ETH</strong>
+                </div>
+              </div>
+
+              <div class="checkout-total">
+                <span>Ukupno za platiti</span>
+                <strong>{{ checkoutSummary.total }} ETH</strong>
+              </div>
+
+              <div class="checkout-note">
+                Plaćanje ide kroz escrow model. Sredstva se zaključavaju do trenutka isplate
+                domaćinu.
+              </div>
+
+              <div v-if="bookingError" class="booking-message booking-message--error">
+                {{ bookingError }}
+              </div>
+
+              <div class="checkout-actions">
+                <button class="checkout-secondary" @click="isCheckoutOpen = false">Odustani</button>
+
+                <button class="checkout-primary" @click="confirmReservation" :disabled="isBooking">
+                  {{ isBooking ? 'Slanje transakcije...' : 'Potvrdi rezervaciju' }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </main>
 
     <main class="page" v-else>
@@ -1271,6 +1373,199 @@ input {
   color: #6b7280;
   font-weight: 600;
   margin-bottom: 8px;
+}
+
+.checkout-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 24, 39, 0.42);
+  z-index: 1250;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.checkout-modal__dialog {
+  width: min(920px, 100%);
+  background: white;
+  border-radius: 28px;
+  padding: 28px;
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.18);
+}
+
+.checkout-modal__top {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.checkout-modal__top h3 {
+  margin: 0 0 6px;
+  font-size: 1.9rem;
+}
+
+.checkout-modal__top p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.checkout-close {
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  background: #fff;
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+
+.checkout-summary {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 22px;
+}
+
+.checkout-summary__image {
+  height: 280px;
+  border-radius: 22px;
+  overflow: hidden;
+  background: #f3f4f6;
+}
+
+.checkout-summary__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.checkout-summary__placeholder {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  background:
+    linear-gradient(135deg, rgba(255, 56, 92, 0.16), rgba(255, 56, 92, 0.04)),
+    linear-gradient(135deg, #f9fafb, #f3f4f6);
+  font-weight: 800;
+  color: #374151;
+}
+
+.checkout-summary__body h4 {
+  margin: 0 0 6px;
+  font-size: 1.25rem;
+}
+
+.checkout-summary__location {
+  margin: 0 0 16px;
+  color: var(--muted);
+}
+
+.checkout-summary__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.checkout-item {
+  background: #fafafa;
+  border: 1px solid #f0f0f0;
+  border-radius: 16px;
+  padding: 14px;
+}
+
+.checkout-item span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin-bottom: 6px;
+}
+
+.checkout-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid #ececec;
+  border-bottom: 1px solid #ececec;
+  padding: 16px 0;
+  margin-bottom: 16px;
+}
+
+.checkout-total span {
+  color: #374151;
+}
+
+.checkout-total strong {
+  font-size: 1.4rem;
+}
+
+.checkout-note {
+  background: #f9fafb;
+  border: 1px solid #eceff3;
+  border-radius: 16px;
+  padding: 14px 16px;
+  color: #4b5563;
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+
+.checkout-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.checkout-secondary,
+.checkout-primary {
+  border: 0;
+  border-radius: 16px;
+  padding: 13px 18px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.checkout-secondary {
+  background: #f3f4f6;
+  color: #111827;
+}
+
+.checkout-primary {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: white;
+}
+
+.checkout-primary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+@media (max-width: 900px) {
+  .checkout-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .checkout-summary__image {
+    height: 240px;
+  }
+}
+
+@media (max-width: 700px) {
+  .checkout-summary__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .checkout-actions {
+    flex-direction: column;
+  }
+
+  .checkout-secondary,
+  .checkout-primary {
+    width: 100%;
+  }
 }
 
 @media (max-width: 768px) {

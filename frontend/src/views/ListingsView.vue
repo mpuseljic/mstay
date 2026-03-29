@@ -15,24 +15,84 @@ const search = ref('')
 const filters = ref({
   search: '',
   maxPrice: '',
+  minRating: '',
   onlyActive: true,
+  sortBy: 'newest',
 })
+
+const locationOptions = computed(() => {
+  const unique = [...new Set(listings.value.map((x) => x.location).filter(Boolean))]
+  return unique.sort((a, b) => a.localeCompare(b, 'hr'))
+})
+
+const selectedLocation = ref('')
 
 const filteredListings = computed(() => {
-  return listings.value.filter((listing) => {
-    const matchesSearch =
-      !filters.value.search ||
-      listing.title.toLowerCase().includes(filters.value.search.toLowerCase()) ||
-      listing.location.toLowerCase().includes(filters.value.search.toLowerCase())
+  let result = [...listings.value]
 
-    const matchesPrice =
-      !filters.value.maxPrice || Number(listing.pricePerNight) <= Number(filters.value.maxPrice)
+  if (filters.value.search.trim()) {
+    const q = filters.value.search.trim().toLowerCase()
+    result = result.filter(
+      (listing) =>
+        listing.title.toLowerCase().includes(q) || listing.location.toLowerCase().includes(q),
+    )
+  }
 
-    const matchesActive = !filters.value.onlyActive || listing.isActive
+  if (selectedLocation.value) {
+    result = result.filter((listing) => listing.location === selectedLocation.value)
+  }
 
-    return matchesSearch && matchesPrice && matchesActive
-  })
+  if (filters.value.maxPrice !== '') {
+    result = result.filter(
+      (listing) => Number(listing.pricePerNight) <= Number(filters.value.maxPrice),
+    )
+  }
+
+  if (filters.value.minRating !== '') {
+    result = result.filter(
+      (listing) => Number(listing.averageRating || 0) >= Number(filters.value.minRating),
+    )
+  }
+
+  if (filters.value.onlyActive) {
+    result = result.filter((listing) => listing.isActive)
+  }
+
+  switch (filters.value.sortBy) {
+    case 'price-asc':
+      result.sort((a, b) => Number(a.pricePerNight) - Number(b.pricePerNight))
+      break
+    case 'price-desc':
+      result.sort((a, b) => Number(b.pricePerNight) - Number(a.pricePerNight))
+      break
+    case 'rating-desc':
+      result.sort((a, b) => Number(b.averageRating || 0) - Number(a.averageRating || 0))
+      break
+    case 'reviews-desc':
+      result.sort((a, b) => Number(b.totalReviews || 0) - Number(a.totalReviews || 0))
+      break
+    case 'title-asc':
+      result.sort((a, b) => a.title.localeCompare(b.title, 'hr'))
+      break
+    case 'newest':
+    default:
+      result.sort((a, b) => Number(b.id) - Number(a.id))
+      break
+  }
+
+  return result
 })
+
+function resetFilters() {
+  filters.value = {
+    search: '',
+    maxPrice: '',
+    minRating: '',
+    onlyActive: true,
+    sortBy: 'newest',
+  }
+  selectedLocation.value = ''
+}
 
 function handleReserve(listing) {
   router.push(`/listings/${listing.id}`)
@@ -51,7 +111,7 @@ onMounted(async () => {
       <section class="header-card">
         <div>
           <h1>Explore stays</h1>
-          <p>Pretraži oglase po lokaciji, naslovu i cijeni.</p>
+          <p>Pretraži, filtriraj i sortiraj oglase po cijeni, lokaciji i ocjeni.</p>
         </div>
       </section>
 
@@ -67,6 +127,16 @@ onMounted(async () => {
           </div>
 
           <div class="filter-group">
+            <label>Lokacija</label>
+            <select v-model="selectedLocation">
+              <option value="">Sve lokacije</option>
+              <option v-for="location in locationOptions" :key="location" :value="location">
+                {{ location }}
+              </option>
+            </select>
+          </div>
+
+          <div class="filter-group">
             <label>Maks. cijena (ETH)</label>
             <input
               v-model="filters.maxPrice"
@@ -77,12 +147,40 @@ onMounted(async () => {
             />
           </div>
 
+          <div class="filter-group">
+            <label>Minimalna ocjena</label>
+            <select v-model="filters.minRating">
+              <option value="">Sve</option>
+              <option value="5">5.0</option>
+              <option value="4">4.0+</option>
+              <option value="3">3.0+</option>
+              <option value="2">2.0+</option>
+              <option value="1">1.0+</option>
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <label>Sortiraj po</label>
+            <select v-model="filters.sortBy">
+              <option value="newest">Najnoviji</option>
+              <option value="price-asc">Cijena: niža prema višoj</option>
+              <option value="price-desc">Cijena: viša prema nižoj</option>
+              <option value="rating-desc">Ocjena: najviša prvo</option>
+              <option value="reviews-desc">Najviše recenzija</option>
+              <option value="title-asc">Naziv A-Z</option>
+            </select>
+          </div>
+
           <div class="filter-toggle">
             <label>
               <input v-model="filters.onlyActive" type="checkbox" />
               Samo aktivni oglasi
             </label>
           </div>
+        </div>
+
+        <div class="filters-actions">
+          <button class="reset-btn" @click="resetFilters">Resetiraj filtere</button>
         </div>
       </section>
 
@@ -96,7 +194,7 @@ onMounted(async () => {
         </div>
       </section>
 
-      <section class="listing-grid">
+      <section v-if="filteredListings.length" class="listing-grid">
         <ListingCard
           v-for="listing in filteredListings"
           :key="listing.id"
@@ -104,6 +202,15 @@ onMounted(async () => {
           :wallet-address="walletAddress"
           @reserve="handleReserve"
         />
+      </section>
+
+      <section v-else class="empty-state">
+        <div class="empty-state__icon">⌕</div>
+        <h3>Nema rezultata</h3>
+        <p>Pokušaj proširiti filtere ili resetirati pretragu.</p>
+        <button class="reset-btn reset-btn--primary" @click="resetFilters">
+          Prikaži sve oglase
+        </button>
       </section>
     </main>
 
@@ -118,12 +225,17 @@ onMounted(async () => {
   padding: 32px 24px 56px;
 }
 
-.header-card {
+.header-card,
+.filters-card,
+.empty-state {
   background: white;
   border: 1px solid var(--border);
   border-radius: 24px;
   padding: 24px;
   box-shadow: var(--shadow);
+}
+
+.header-card {
   margin-bottom: 20px;
 }
 
@@ -137,11 +249,6 @@ onMounted(async () => {
 }
 
 .filters-card {
-  background: white;
-  border: 1px solid var(--border);
-  border-radius: 24px;
-  padding: 20px;
-  box-shadow: var(--shadow);
   margin-bottom: 22px;
 }
 
@@ -168,10 +275,13 @@ onMounted(async () => {
   color: #374151;
 }
 
-.filter-group input {
+.filter-group input,
+.filter-group select {
   border: 1px solid #dddddd;
   border-radius: 16px;
   padding: 14px 16px;
+  font: inherit;
+  background: white;
 }
 
 .filter-toggle {
@@ -182,6 +292,28 @@ onMounted(async () => {
 
 .filter-toggle input {
   margin-right: 8px;
+}
+
+.filters-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+.reset-btn {
+  border: 1px solid var(--border);
+  background: white;
+  color: #111827;
+  border-radius: 14px;
+  padding: 12px 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.reset-btn--primary {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: white;
+  border: 0;
 }
 
 .results-head {
@@ -201,6 +333,30 @@ onMounted(async () => {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 18px;
+}
+
+.empty-state {
+  text-align: center;
+}
+
+.empty-state__icon {
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 16px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #fff1f3;
+  font-size: 1.8rem;
+}
+
+.empty-state h3 {
+  margin: 0 0 10px;
+}
+
+.empty-state p {
+  margin: 0 0 18px;
+  color: var(--muted);
 }
 
 .alert {
@@ -234,9 +390,21 @@ onMounted(async () => {
 }
 
 @media (max-width: 700px) {
+  .page {
+    padding: 24px 14px 42px;
+  }
+
   .filters-grid,
   .listing-grid {
     grid-template-columns: 1fr;
+  }
+
+  .filters-actions {
+    justify-content: stretch;
+  }
+
+  .reset-btn {
+    width: 100%;
   }
 }
 </style>

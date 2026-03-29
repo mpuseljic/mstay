@@ -230,6 +230,13 @@ function yesterdayEnd() {
   return endOfDay(d)
 }
 
+function dayBefore(date) {
+  const d = new Date(date)
+  d.setDate(d.getDate() - 1)
+  d.setHours(0, 0, 0, 0)
+  return d
+}
+
 function toDateFromUnix(unixSeconds) {
   return new Date(Number(unixSeconds) * 1000)
 }
@@ -259,10 +266,17 @@ function clearSelectedDates() {
 const bookedRanges = computed(() => {
   return listingReservations.value
     .filter((reservation) => ['0', '3'].includes(reservation.status))
-    .map((reservation) => ({
-      start: startOfDay(toDateFromUnix(reservation.checkInTimestamp)),
-      end: startOfDay(toDateFromUnix(reservation.checkOutTimestamp)),
-    }))
+    .map((reservation) => {
+      const start = startOfDay(toDateFromUnix(reservation.checkInTimestamp))
+      const checkout = startOfDay(toDateFromUnix(reservation.checkOutTimestamp))
+      const end = dayBefore(checkout)
+
+      return {
+        start,
+        end,
+      }
+    })
+    .filter((range) => range.end >= range.start)
 })
 
 const calendarAttributes = computed(() => {

@@ -8,10 +8,12 @@ import { useMstay } from '../composables/useMstay'
 
 const {
   walletAddress,
+  listings,
   hostReservations,
   successMsg,
   errorMsg,
   connectCurrentWallet,
+  loadListings,
   loadHostReservations,
   cancelReservationByHost,
   releasePayout,
@@ -29,6 +31,32 @@ const reviewMessage = ref('')
 const reviewError = ref('')
 const hostReviewStatus = ref([])
 const hostReviewStatusLoading = ref(true)
+
+const myListings = computed(() => {
+  if (!walletAddress.value) return []
+
+  return listings.value.filter(
+    (listing) => listing.host?.toLowerCase() === walletAddress.value.toLowerCase(),
+  )
+})
+
+const hostingListingStats = computed(() => {
+  return myListings.value.map((listing) => {
+    const relatedReservations = hostReservations.value.filter(
+      (reservation) => reservation.listingId === listing.id,
+    )
+
+    const activeReservations = relatedReservations.filter(
+      (reservation) => reservation.status === '0',
+    ).length
+
+    return {
+      ...listing,
+      reservationsCount: relatedReservations.length,
+      activeReservationsCount: activeReservations,
+    }
+  })
+})
 
 const activeHostingReservations = computed(() => {
   return hostReservations.value.filter((reservation) => reservation.status === '0').length
@@ -114,6 +142,7 @@ watch(
   () => walletAddress.value,
   async (newWallet) => {
     if (newWallet) {
+      await loadListings()
       await loadHostReservations()
       await loadHostReviewStatuses()
     } else {
@@ -127,6 +156,7 @@ watch(
 
 onMounted(async () => {
   if (walletAddress.value) {
+    await loadListings()
     await loadHostReservations()
     await loadHostReviewStatuses()
   } else {
@@ -186,11 +216,85 @@ watch(
 
       <section class="section-head">
         <div>
-          <h2>Reservations for your stays</h2>
-          <p>Pregled svih rezervacija koje su gosti napravili za tvoje oglase.</p>
+          <h2>My listings</h2>
+          <p>Pregled svih oglasa koje si objavila kao domaćin.</p>
         </div>
 
         <RouterLink to="/create-listing" class="explore-btn"> Dodaj novi oglas </RouterLink>
+      </section>
+
+      <section v-if="hostingListingStats.length === 0" class="empty-state empty-state--compact">
+        <div class="empty-state__icon">🏡</div>
+        <h3>Još nemaš objavljenih oglasa</h3>
+        <p>Objavi prvi smještaj kako bi mogao primati rezervacije i recenzije.</p>
+        <RouterLink to="/create-listing" class="primary-link-btn"> Objavi prvi oglas </RouterLink>
+      </section>
+
+      <section v-else class="host-listing-grid">
+        <article v-for="listing in hostingListingStats" :key="listing.id" class="host-listing-card">
+          <div class="host-listing-card__image">
+            <img
+              v-if="listing.imageUrl"
+              :src="listing.imageUrl"
+              :alt="listing.title"
+              class="host-listing-card__img"
+            />
+            <div v-else class="host-listing-card__placeholder">
+              <span>mStay</span>
+            </div>
+          </div>
+
+          <div class="host-listing-card__body">
+            <div class="host-listing-card__top">
+              <div>
+                <h3>{{ listing.title }}</h3>
+                <p>{{ listing.location }}</p>
+              </div>
+
+              <span :class="['badge', listing.isActive ? 'badge--success' : 'badge--muted']">
+                {{ listing.isActive ? 'Aktivan' : 'Neaktivan' }}
+              </span>
+            </div>
+
+            <div class="host-rating-row" v-if="listing.totalReviews > 0">
+              <span class="host-rating-row__star">★</span>
+              <strong>{{ listing.averageRating.toFixed(1) }}</strong>
+              <span>{{ listing.totalReviews }} recenzija</span>
+            </div>
+
+            <div class="host-rating-row host-rating-row--muted" v-else>
+              <span>Još nema recenzija</span>
+            </div>
+
+            <div class="host-listing-stats">
+              <div class="host-listing-stat">
+                <span>Cijena / noć</span>
+                <strong>{{ listing.pricePerNight }} ETH</strong>
+              </div>
+
+              <div class="host-listing-stat">
+                <span>Ukupno rezervacija</span>
+                <strong>{{ listing.reservationsCount }}</strong>
+              </div>
+
+              <div class="host-listing-stat">
+                <span>Aktivne rezervacije</span>
+                <strong>{{ listing.activeReservationsCount }}</strong>
+              </div>
+            </div>
+
+            <RouterLink :to="`/listings/${listing.id}`" class="host-listing-link">
+              Otvori oglas
+            </RouterLink>
+          </div>
+        </article>
+      </section>
+
+      <section class="section-head">
+        <div>
+          <h2>Reservations for your stays</h2>
+          <p>Pregled svih rezervacija koje su gosti napravili za tvoje oglase.</p>
+        </div>
       </section>
 
       <section v-if="hostReservations.length === 0" class="empty-state">
@@ -200,7 +304,6 @@ watch(
           Kada gost rezervira jedan od tvojih oglasa, ovdje ćeš vidjeti sve detalje, uključujući
           status rezervacije, mogućnost otkazivanja, isplate i recenzije.
         </p>
-        <RouterLink to="/create-listing" class="primary-link-btn"> Objavi novi oglas </RouterLink>
       </section>
 
       <section v-else class="reservation-grid">
@@ -455,6 +558,143 @@ textarea {
   background: #fef2f2;
   border: 1px solid #fecaca;
   color: #b91c1c;
+}
+
+.host-listing-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  margin-bottom: 28px;
+}
+
+.host-listing-card {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+
+.host-listing-card__image {
+  height: 220px;
+  background: #f3f4f6;
+}
+
+.host-listing-card__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.host-listing-card__placeholder {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  background:
+    linear-gradient(135deg, rgba(255, 56, 92, 0.16), rgba(255, 56, 92, 0.04)),
+    linear-gradient(135deg, #f9fafb, #f3f4f6);
+  font-weight: 800;
+  color: #374151;
+}
+
+.host-listing-card__body {
+  padding: 20px;
+}
+
+.host-listing-card__top {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+
+.host-listing-card__top h3 {
+  margin: 0 0 6px;
+  font-size: 1.08rem;
+}
+
+.host-listing-card__top p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.host-rating-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 14px;
+  color: #374151;
+}
+
+.host-rating-row--muted {
+  color: var(--muted);
+}
+
+.host-rating-row__star {
+  color: #f59e0b;
+}
+
+.host-listing-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.host-listing-stat {
+  background: #fafafa;
+  border: 1px solid #f0f0f0;
+  border-radius: 16px;
+  padding: 14px;
+}
+
+.host-listing-stat span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin-bottom: 6px;
+}
+
+.host-listing-stat strong {
+  font-size: 1rem;
+}
+
+.host-listing-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  padding: 12px 16px;
+  background: #111827;
+  color: white;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.empty-state--compact {
+  margin-bottom: 28px;
+}
+
+@media (max-width: 1100px) {
+  .hero,
+  .reservation-grid,
+  .host-listing-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .section-head {
+    flex-direction: column;
+    align-items: start;
+  }
+}
+
+@media (max-width: 700px) {
+  .host-listing-stats {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 1100px) {

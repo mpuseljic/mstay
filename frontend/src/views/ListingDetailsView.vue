@@ -5,7 +5,8 @@ import AppNavbar from '../components/layout/AppNavbar.vue'
 import { useMstay } from '../composables/useMstay'
 import AppFooter from '@/components/layout/AppFooter.vue'
 import ReviewCard from '@/components/reviews/ReviewCard.vue'
-import { start } from '@popperjs/core'
+import HostProfileCard from '@/components/profile/HostProfileCard.vue'
+import { useProfile } from '@/composables/useProfile'
 
 const route = useRoute()
 
@@ -22,6 +23,9 @@ const {
   loadReviewsForUser,
   fetchReservationsByListing,
 } = useMstay()
+
+const { loadProfile } = useProfile()
+const hostProfile = ref(null)
 
 const listing = ref(null)
 const activeImage = ref('')
@@ -95,6 +99,12 @@ async function loadCurrentListing() {
   await loadListings()
 
   listing.value = listings.value.find((item) => item.id === String(route.params.id)) || null
+
+  if (listing.value?.host) {
+    reviews.value = await loadReviewsForUser(listing.value.host)
+    hostProfile.value = await loadProfile(listing.value.host)
+    console.log('HOST PROFILE: ', hostProfile.value)
+  }
 
   if (listing.value?.id) {
     const reservationData = await fetchReservationsByListing(Number(listing.value.id))
@@ -522,6 +532,12 @@ onMounted(async () => {
               <ReviewCard v-for="review in reviews" :key="review.id" :review="review" />
             </div>
           </div>
+          <HostProfileCard
+            :profile="hostProfile"
+            :average-rating="listing.averageRating || 0"
+            :total-reviews="listing.totalReviews || 0"
+            :host-wallet="listing.host"
+          />
         </div>
 
         <aside class="booking-sidebar">

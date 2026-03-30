@@ -62,6 +62,13 @@ function isActive(path) {
         >
           My Hosting
         </RouterLink>
+
+        <RouterLink
+          :class="['nav__link', { 'nav__link--active': isActive('/my-profile') }]"
+          to="/my-profile"
+        >
+          My Profile
+        </RouterLink>
       </nav>
 
       <button class="wallet-btn" @click="$emit('connect')">

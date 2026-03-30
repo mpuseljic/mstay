@@ -1,0 +1,36 @@
+[
+  {
+    "walletAddress": "0x70997970c51812dc3a010c7d01b50e0d17dc79c8",
+    "firstName": "Mirna",
+    "lastName": "Pušeljić",
+    "displayName": "Mirna",
+    "bio": "Pozdrav, ja sam Mirna.",
+    "location": "Pula, Hrvatska",
+    "jobTitle": "Web Developer",
+    "languages": [
+      "hrvatski",
+      "engleski"
+    ],
+    "about": "Nešto više o meni",
+    "avatarUrl": "",
+    "updatedAt": "2026-03-30T19:12:19.289Z",
+    "createdAt": "2026-03-30T19:12:19.289Z"
+  },
+  {
+    "walletAddress": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
+    "firstName": "Marko",
+    "lastName": "Marković",
+    "displayName": "Marko",
+    "bio": "Pozdrav, ja sam Marko",
+    "location": "Zagreb, Hrvatska",
+    "jobTitle": "Developer",
+    "languages": [
+      "hrvatski",
+      "engleski"
+    ],
+    "about": "Nešto više o meni",
+    "avatarUrl": "",
+    "updatedAt": "2026-03-30T19:28:28.732Z",
+    "createdAt": "2026-03-30T19:28:28.733Z"
+  }
+]

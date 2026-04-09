@@ -7,6 +7,7 @@ import AppFooter from '@/components/layout/AppFooter.vue'
 import ReviewCard from '@/components/reviews/ReviewCard.vue'
 import HostProfileCard from '@/components/profile/HostProfileCard.vue'
 import { useProfile } from '@/composables/useProfile'
+import { useListingDetails } from '@/composables/useListingDetails'
 
 const route = useRoute()
 
@@ -26,6 +27,7 @@ const {
 
 const { loadProfile } = useProfile()
 const hostProfile = ref(null)
+const { loadListingDetails } = useListingDetails()
 
 const listing = ref(null)
 const activeImage = ref('')
@@ -36,6 +38,9 @@ const reservationPricePreview = ref('0')
 const bookingError = ref('')
 const bookingSuccess = ref('')
 const reviews = ref([])
+const listingContent = ref(null)
+const isDescriptionModalOpen = ref(false)
+const isAmenitiesModalOpen = ref(false)
 
 const isCheckoutOpen = ref(false)
 
@@ -99,6 +104,10 @@ async function loadCurrentListing() {
   await loadListings()
 
   listing.value = listings.value.find((item) => item.id === String(route.params.id)) || null
+
+  if (listing.value?.id) {
+    listingContent.value = await loadListingDetails(Number(listing.value.id))
+  }
 
   if (listing.value?.host) {
     reviews.value = await loadReviewsForUser(listing.value.host)
@@ -532,6 +541,94 @@ onMounted(async () => {
               <ReviewCard v-for="review in reviews" :key="review.id" :review="review" />
             </div>
           </div>
+
+          <div class="content-card" v-if="listingContent">
+            <h2>{{ listingContent.propertyType || 'Smještaj' }} — {{ listing.location }}</h2>
+            <p class="listing-meta-line">
+              {{ listingContent.guestCount || 0 }} gostiju ·
+              {{ listingContent.bedrooms || 0 }} spavaće sobe ·
+              {{ listingContent.beds || 0 }} kreveta · {{ listingContent.bathrooms || 0 }} kupaonica
+            </p>
+          </div>
+
+          <div class="content-card" v-if="listingContent?.highlights?.length">
+            <h2>Istaknute prednosti</h2>
+
+            <div class="highlights-list">
+              <div
+                v-for="(item, index) in listingContent.highlights"
+                :key="index"
+                class="highlight-item"
+              >
+                <h3>{{ item.title }}</h3>
+                <p>{{ item.description }}</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="content-card" v-if="listingContent?.amenities?.length">
+            <h2>Što ovaj smještaj nudi</h2>
+
+            <div class="amenities-grid">
+              <div
+                v-for="(amenity, index) in listingContent.amenities.slice(0, 8)"
+                :key="index"
+                class="amenity-row"
+              >
+                {{ amenity }}
+              </div>
+            </div>
+
+            <button class="section-link-btn" @click="isAmenitiesModalOpen = true">
+              Prikaži sve sadržaje ({{ listingContent.amenities.length }})
+            </button>
+          </div>
+
+          <div class="content-card" v-if="listingContent?.sleepingArrangements?.length">
+            <h2>Gdje ćete spavati</h2>
+
+            <div class="sleeping-grid">
+              <div
+                v-for="(room, index) in listingContent.sleepingArrangements"
+                :key="index"
+                class="sleeping-card"
+              >
+                <div class="sleeping-card__image">
+                  <img
+                    v-if="room.imageUrl"
+                    :src="room.imageUrl"
+                    :alt="room.title"
+                    class="sleeping-card__img"
+                  />
+                  <div v-else class="sleeping-card__placeholder">Room</div>
+                </div>
+
+                <h3>{{ room.title }}</h3>
+                <p>{{ room.subtitle }}</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="content-card" v-if="listingContent">
+            <h2>Gdje ćete biti</h2>
+
+            <p class="location-title">
+              {{ listingContent.locationTitle || listing.location }}
+            </p>
+
+            <p class="location-description">
+              {{ listingContent.locationDescription || 'Opis lokacije nije dostupan.' }}
+            </p>
+          </div>
+          <div class="content-card" v-if="listingContent?.houseRules?.length">
+            <h2>Kućna pravila</h2>
+
+            <ul class="rules-list">
+              <li v-for="(rule, index) in listingContent.houseRules" :key="index">
+                {{ rule }}
+              </li>
+            </ul>
+          </div>
           <HostProfileCard
             :profile="hostProfile"
             :average-rating="listing.averageRating || 0"
@@ -736,6 +833,45 @@ onMounted(async () => {
                   {{ isBooking ? 'Slanje transakcije...' : 'Potvrdi rezervaciju' }}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div
+        v-if="isDescriptionModalOpen"
+        class="section-modal"
+        @click.self="isDescriptionModalOpen = false"
+      >
+        <div class="section-modal__dialog">
+          <button class="section-modal__close" @click="isDescriptionModalOpen = false">✕</button>
+          <h2>Više o smještaju</h2>
+          <p class="section-modal__text">
+            {{
+              listingContent?.descriptionLong ||
+              listingContent?.descriptionShort ||
+              'Opis nije dostupan.'
+            }}
+          </p>
+        </div>
+      </div>
+
+      <div
+        v-if="isAmenitiesModalOpen"
+        class="section-modal"
+        @click.self="isAmenitiesModalOpen = false"
+      >
+        <div class="section-modal__dialog">
+          <button class="section-modal__close" @click="isAmenitiesModalOpen = false">✕</button>
+          <h2>Svi sadržaji</h2>
+
+          <div class="amenities-grid amenities-grid--modal">
+            <div
+              v-for="(amenity, index) in listingContent?.amenities || []"
+              :key="index"
+              class="amenity-row"
+            >
+              {{ amenity }}
             </div>
           </div>
         </div>
@@ -1557,6 +1693,182 @@ input {
 .checkout-primary:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+}
+
+.listing-meta-line {
+  color: #374151;
+  font-weight: 600;
+}
+
+.highlights-list {
+  display: grid;
+  gap: 14px;
+}
+
+.highlight-item {
+  padding-bottom: 14px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.highlight-item:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.highlight-item h3 {
+  margin: 0 0 6px;
+  font-size: 1rem;
+}
+
+.highlight-item p {
+  margin: 0;
+  color: #4b5563;
+}
+
+.description-preview {
+  margin-bottom: 14px !important;
+}
+
+.section-link-btn {
+  border: 0;
+  background: #f3f4f6;
+  color: #111827;
+  border-radius: 14px;
+  padding: 12px 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.amenities-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.amenity-row {
+  padding: 14px 0;
+  border-bottom: 1px solid #f0f0f0;
+  font-weight: 600;
+  color: #374151;
+}
+
+.sleeping-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.sleeping-card {
+  background: #fafafa;
+  border: 1px solid #f0f0f0;
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.sleeping-card__image {
+  height: 180px;
+  background: #f3f4f6;
+}
+
+.sleeping-card__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.sleeping-card__placeholder {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  color: #374151;
+}
+
+.sleeping-card h3 {
+  margin: 14px 14px 6px;
+}
+
+.sleeping-card p {
+  margin: 0 14px 14px;
+  color: var(--muted);
+}
+
+.location-title {
+  font-weight: 700;
+  margin-bottom: 10px !important;
+}
+
+.location-description {
+  color: #4b5563;
+  line-height: 1.75;
+}
+
+.rules-list {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.rules-list li {
+  margin-bottom: 8px;
+  color: #374151;
+}
+
+.section-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 24, 39, 0.42);
+  z-index: 1300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.section-modal__dialog {
+  width: min(900px, 100%);
+  max-height: 85vh;
+  overflow: auto;
+  background: white;
+  border-radius: 28px;
+  padding: 28px;
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.18);
+  position: relative;
+}
+
+.section-modal__close {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  width: 42px;
+  height: 42px;
+  border: 0;
+  border-radius: 50%;
+  background: #fff;
+  font-size: 1.15rem;
+  cursor: pointer;
+}
+
+.section-modal__dialog h2 {
+  margin: 0 0 18px;
+}
+
+.section-modal__text {
+  white-space: pre-line;
+  color: #374151;
+  line-height: 1.8;
+}
+
+.amenities-grid--modal {
+  margin-bottom: 0;
+}
+
+@media (max-width: 900px) {
+  .sleeping-grid,
+  .amenities-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 900px) {

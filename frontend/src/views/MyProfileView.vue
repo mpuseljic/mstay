@@ -5,6 +5,7 @@ import AppFooter from '../components/layout/AppFooter.vue'
 import ReviewCard from '../components/reviews/ReviewCard.vue'
 import { useMstay } from '../composables/useMstay'
 import { useProfile } from '@/composables/useProfile'
+import { uploadImage } from '@/services/upload'
 
 const {
   walletAddress,
@@ -35,6 +36,7 @@ const form = ref({
   avatarUrl: '',
 })
 
+const isUploadingAvatar = ref(false)
 const shortenedWallet = computed(() => {
   if (!walletAddress.value) return ''
   return `${walletAddress.value.slice(0, 6)}...${walletAddress.value.slice(-4)}`
@@ -96,6 +98,23 @@ async function handleSaveProfile() {
     about: form.value.about,
     avatarUrl: form.value.avatarUrl,
   })
+}
+
+async function handleAvatarUpload(e) {
+  const file = e.target.files?.[0]
+  if (!file) return
+
+  try {
+    isUploadingAvatar.value = true
+
+    const url = await uploadImage(file)
+
+    form.value.avatarUrl = url
+  } catch (err) {
+    alert('Greška kod upload-a slike.')
+  } finally {
+    isUploadingAvatar.value = false
+  }
 }
 
 const ratingLabel = computed(() => {
@@ -233,7 +252,7 @@ watch(
 
             <div class="form-group form-group--full">
               <label>Avatar URL</label>
-              <input v-model="form.avatarUrl" type="text" placeholder="https://..." />
+              <input type="file" @change="handleAvatarUpload" />
             </div>
 
             <div class="form-group">

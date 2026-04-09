@@ -16,8 +16,36 @@ app.use(express.json());
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const dataDir = path.join(__dirname, "data");
 
 const profilesPath = path.join(__dirname, "data", "profiles.json");
+const listingDetailsPath = path.join(dataDir, "listingDetails.json");
+
+function ensureListingDetailsFile() {
+  if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true });
+  }
+
+  if (!fs.existsSync(listingDetailsPath)) {
+    fs.writeFileSync(listingDetailsPath, "[]", "utf8");
+  }
+}
+
+function readListingDetails() {
+  try {
+    ensureListingDetailsFile();
+    const raw = fs.readFileSync(listingDetailsPath, "utf8");
+    return JSON.parse(raw || "[]");
+  } catch (err) {
+    console.error("Greška kod čitanja listingDetails.json: ", err);
+    return [];
+  }
+}
+
+function writeListingDetails(data) {
+  ensureListingDetailsFile();
+  fs.writeFileSync(listingDetailsPath, JSON.stringify(data, null, 2), "utf8");
+}
 
 function readProfiles() {
   try {
@@ -205,6 +233,101 @@ app.post("/api/profile/update", express.json(), (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Greška kod spremanja profila.",
+    });
+  }
+});
+
+app.get("/api/listing-details/:listingId", (req, res) => {
+  try {
+    const listingId = Number(req.params.listingId);
+    const allDetails = readListingDetails();
+
+    const details =
+      allDetails.find((x) => Number(x.listingId) === listingId) || null;
+
+    return res.json({
+      success: true,
+      details,
+    });
+  } catch (err) {
+    console.error("Greška kod dohvaćanja listing details: ", err);
+    return res.status(500).json({
+      success: false,
+      message: "Greška kod dohvaćanja listing details",
+    });
+  }
+});
+
+app.post("/api/listing-details/update", (req, res) => {
+  try {
+    const payload = req.body || {};
+    const listingId = Number(payload.listingId);
+
+    if (!listingId) {
+      return res.status(400).json({
+        success: false,
+        message: "listingId je obavezan.",
+      });
+    }
+
+    const allDetails = readListingDetails();
+    const existingIndex = allDetails.findIndex(
+      (x) => Number(x.listingId) === listingId,
+    );
+
+    const cleanData = {
+      listingId,
+      summary: String(payload.summary || "").trim(),
+      descriptionShort: String(payload.descriptionShort || "").trim(),
+      descriptionLong: String(payload.descriptionLong || "").trim(),
+      propertyType: String(payload.propertyType || "").trim(),
+      guestCount: Number(payload.guestCount || 0),
+      bedrooms: Number(payload.bedrooms || 0),
+      beds: Number(payload.beds || 0),
+      bathrooms: Number(payload.bathrooms || 0),
+      highlights: Array.isArray(payload.highlights) ? payload.highlights : [],
+      amenities: Array.isArray(payload.amenities) ? payload.amenities : [],
+      sleepingArrangements: Array.isArray(payload.sleepingArrangements)
+        ? payload.sleepingArrangements
+        : [],
+      locationTitle: String(payload.locationTitle || "").trim(),
+      locationDescription: String(payload.locationDescription || "").trim(),
+      latitude: payload.latitude ?? null,
+      longitude: payload.longitude ?? null,
+      houseRules: Array.isArray(payload.houseRules) ? payload.houseRules : [],
+      updatedAt: new Date().toISOString(),
+    };
+
+    if (existingIndex >= 0) {
+      allDetails[existingIndex] = {
+        ...allDetails[existingIndex],
+        ...cleanData,
+      };
+    } else {
+      allDetails.push({
+        ...cleanData,
+        createdAt: new Date().toISOString(),
+      });
+    }
+
+    writeListingDetails(allDetails);
+
+    const saved =
+      existingIndex >= 0
+        ? allDetails[existingIndex]
+        : allDetails[allDetails.length - 1];
+
+    return res.json({
+      success: true,
+      message: "Listing details su uspješno spremljeni.",
+      details: saved,
+    });
+  } catch (err) {
+    console.error("Greška kod spremanja listing details:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Greška kod spremanja listing details.",
+      error: err.message,
     });
   }
 });

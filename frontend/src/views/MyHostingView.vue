@@ -5,6 +5,7 @@ import AppNavbar from '../components/layout/AppNavbar.vue'
 import AppFooter from '../components/layout/AppFooter.vue'
 import ReservationCard from '../components/reservations/ReservationCard.vue'
 import { useMstay } from '../composables/useMstay'
+import EditListingDetailsModal from '@/components/hosting/EditListingDetailsModal.vue'
 
 const {
   walletAddress,
@@ -31,6 +32,8 @@ const reviewMessage = ref('')
 const reviewError = ref('')
 const hostReviewStatus = ref([])
 const hostReviewStatusLoading = ref(true)
+const selectedListingForEdit = ref(null)
+const isEditDetailsOpen = ref(false)
 
 const myListings = computed(() => {
   if (!walletAddress.value) return []
@@ -97,6 +100,15 @@ const closedHostingReservations = computed(() => {
     ['1', '2', '3', '4'].includes(reservation.status),
   ).length
 })
+
+function openListingDetailsEditor(listing) {
+  selectedListingForEdit.value = listing
+  isEditDetailsOpen.value = true
+}
+
+async function handleListingDetailsSaved() {
+  await loadListings()
+}
 
 function canReviewReservation(reservation) {
   if (hostReviewStatusLoading.value) return false
@@ -343,6 +355,10 @@ watch(
             <RouterLink :to="`/listings/${listing.id}`" class="host-listing-link">
               Otvori oglas
             </RouterLink>
+
+            <button class="host-listing-edit-btn" @click="openListingDetailsEditor(listing)">
+              Uredi detalje oglasa
+            </button>
           </div>
         </article>
       </section>
@@ -412,6 +428,13 @@ watch(
 
         <button class="primary-link-btn" @click="handleHostReview">Spremi recenziju</button>
       </section>
+
+      <EditListingDetailsModal
+        :open="isEditDetailsOpen"
+        :listing="selectedListingForEdit"
+        @close="isEditDetailsOpen = false"
+        @saved="handleListingDetailsSaved"
+      ></EditListingDetailsModal>
     </main>
 
     <AppFooter />
@@ -729,6 +752,20 @@ textarea {
   color: white;
   font-weight: 700;
   text-decoration: none;
+}
+
+.host-listing-edit-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  padding: 12px 16px;
+  background: #f3f4f6;
+  color: #111827;
+  font-weight: 700;
+  border: 0;
+  cursor: pointer;
+  margin-left: 10px;
 }
 
 .empty-state--compact {

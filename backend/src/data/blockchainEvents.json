@@ -1,0 +1,29 @@
+{
+  "reservations": [
+    {
+      "id": "2",
+      "listingId": "1",
+      "guest": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+      "checkInDate": "1775865600",
+      "checkOutDate": "1775952000",
+      "totalPrice": "1",
+      "transactionHash": null,
+      "logIndex": null,
+      "blockNumber": null,
+      "capturedAt": "2026-04-10T09:36:34.220Z"
+    }
+  ],
+  "reviews": [],
+  "payouts": [
+    {
+      "id": "1",
+      "host": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+      "amount": "120000000000000000000",
+      "transactionHash": "0xee30f14f6b18260c7527b9ca0577b3249b145e80ff5197a7317c20a55b230f3a",
+      "logIndex": 0,
+      "blockNumber": 6,
+      "capturedAt": "2026-04-10T09:37:38.686Z"
+    }
+  ],
+  "cancellations": []
+}

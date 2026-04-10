@@ -5,6 +5,7 @@ import multer from "multer";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import { startBlockchainListener } from "./listeners/blockchainListener.js";
 
 dotenv.config();
 
@@ -402,4 +403,5 @@ const PORT = process.env.PORT || 3001;
 
 app.listen(PORT, () => {
   console.log(`Backend radi na portu ${PORT}`);
+  startBlockchainListener();
 });

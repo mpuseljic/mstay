@@ -1,8 +1,8 @@
 import { BrowserProvider, Contract, parseEther, formatEther } from 'ethers'
-import { MSTAY_CORE_ADDRESS } from '../contracts/coreConfig'
-import { MSTAY_REVIEWS_ADDRESS } from '../contracts/reviewsConfig'
-import { MSTAY_CORE_ABI } from '../contracts/mstayCoreAbi'
-import { MSTAY_REVIEWS_ABI } from '../contracts/mstayReviewsAbi'
+import { MSTAY_CORE_ADDRESS } from '../../../backend/src/contracts/coreConfig'
+import { MSTAY_REVIEWS_ADDRESS } from '../../../backend/src/contracts/reviewsConfig'
+import { MSTAY_CORE_ABI } from '../../../backend/src/contracts/mstayCoreAbi'
+import { MSTAY_REVIEWS_ABI } from '../../../backend/src/contracts/mstayReviewsAbi'
 
 export async function connectWallet() {
   if (!window.ethereum) {

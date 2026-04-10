@@ -163,6 +163,7 @@ async function loadReviewsForUser(userAddress) {
       comment: item.comment,
       forHost: item.forHost,
       createdAt: formatDateTime(item.createdAt),
+      reviewHash: item.reviewHash,
     }))
   } catch (err) {
     errorMsg.value = err.message || 'Greška pri dohvaćanju recenzija.'

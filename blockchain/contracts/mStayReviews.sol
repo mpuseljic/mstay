@@ -28,6 +28,7 @@ contract MStayReviews {
         string comment;
         bool forHost;
         uint256 createdAt;
+        bytes32 reviewHash;
     }
 
     mapping(uint256 => Review) public reviews;
@@ -41,7 +42,8 @@ contract MStayReviews {
         address reviewedUser,
         uint8 rating,
         string comment,
-        bool forHost
+        bool forHost,
+        bytes32 reviewHash
     );
 
     constructor(address _coreAddress) {
@@ -83,6 +85,18 @@ contract MStayReviews {
             hostReviewLeft[_reservationId] = true;
         }
 
+        bytes32 computedHash = keccak256(
+            abi.encodePacked(
+                _reservationId,
+                msg.sender,
+                reviewedUser,
+                _rating,
+                _comment,
+                _forHost,
+                block.timestamp
+            )
+        );
+
         reviewCount++;
 
         reviews[reviewCount] = Review({
@@ -93,7 +107,8 @@ contract MStayReviews {
             rating: _rating,
             comment: _comment,
             forHost: _forHost,
-            createdAt: block.timestamp
+            createdAt: block.timestamp,
+            reviewHash: computedHash
         });
 
         emit ReviewAdded(
@@ -103,7 +118,8 @@ contract MStayReviews {
             reviewedUser,
             _rating,
             _comment,
-            _forHost
+            _forHost,
+            computedHash
         );
     }
 

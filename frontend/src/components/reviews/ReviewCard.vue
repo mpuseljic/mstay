@@ -26,6 +26,8 @@ function stars(rating) {
       <span class="review-date">{{ review.createdAt }}</span>
     </div>
 
+    <div v-if="review.reviewHash" class="review-verified">On-chain verified review</div>
+
     <p class="review-comment">{{ review.comment }}</p>
 
     <div class="review-meta">
@@ -59,6 +61,19 @@ function stars(rating) {
 .review-top p {
   margin: 6px 0 0;
   color: #4b5563;
+}
+
+.review-verified {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 8px 12px;
+  background: #ecfdf3;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+  font-size: 0.82rem;
+  font-weight: 700;
+  margin-bottom: 12px;
 }
 
 .review-date {

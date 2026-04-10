@@ -6,6 +6,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { startBlockchainListener } from "./listeners/blockchainListener.js";
+import { readEvents } from "./utils/eventsStore.js";
 
 dotenv.config();
 
@@ -30,6 +31,14 @@ function ensureListingDetailsFile() {
   if (!fs.existsSync(listingDetailsPath)) {
     fs.writeFileSync(listingDetailsPath, "[]", "utf8");
   }
+}
+
+function reservationsOverlap(startA, endA, startB, endB) {
+  return Number(startA) < Number(endB) && Number(endA) > Number(startB);
+}
+
+function toUnixTimestamp(dateString) {
+  return Math.floor(new Date(dateString).getTime() / 1000);
 }
 
 function readListingDetails() {
@@ -394,6 +403,112 @@ app.post("/api/geocode", async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Greška kod geocodinga.",
+      error: err.message,
+    });
+  }
+});
+
+app.post("/api/search-listings", (req, res) => {
+  try {
+    const {
+      listings = [],
+      search = "",
+      location = "",
+      maxPrice = "",
+      minRating = "",
+      onlyActive = true,
+      checkIn = "",
+      checkOut = "",
+    } = req.body || {};
+
+    let result = Array.isArray(listings) ? [...listings] : [];
+
+    const eventsData = readEvents();
+    const reservationEvents = Array.isArray(eventsData.reservations)
+      ? eventsData.reservations
+      : [];
+    const cancellationEvents = Array.isArray(eventsData.cancellations)
+      ? eventsData.cancellations
+      : [];
+
+    if (String(search).trim()) {
+      const q = String(search).trim().toLowerCase();
+      result = result.filter((listing) => {
+        return (
+          String(listing.title || "")
+            .toLowerCase()
+            .includes(q) ||
+          String(listing.location || "")
+            .toLowerCase()
+            .includes(q)
+        );
+      });
+    }
+
+    if (String(location).trim()) {
+      const loc = String(location).trim().toLowerCase();
+      result = result.filter(
+        (listing) => String(listing.location || "").toLowerCase() === loc,
+      );
+    }
+
+    if (maxPrice !== "" && maxPrice !== null && maxPrice !== undefined) {
+      result = result.filter(
+        (listing) => Number(listing.pricePerNight || 0) <= Number(maxPrice),
+      );
+    }
+
+    if (minRating !== "" && minRating !== null && minRating !== undefined) {
+      result = result.filter(
+        (listing) => Number(listing.averageRating || 0) >= Number(minRating),
+      );
+    }
+
+    if (onlyActive) {
+      result = result.filter((listing) => Boolean(listing.isActive));
+    }
+
+    if (checkIn && checkOut) {
+      const checkInTs = toUnixTimestamp(checkIn);
+      const checkOutTs = toUnixTimestamp(checkOut);
+
+      result = result.filter((listing) => {
+        const listingId = String(listing.id);
+
+        const relatedReservations = reservationEvents.filter(
+          (reservation) => String(reservation.listingId) === listingId,
+        );
+
+        const cancelledReservationIds = new Set(
+          cancellationEvents.map((item) => String(item.id)),
+        );
+
+        const activeReservations = relatedReservations.filter(
+          (reservation) => !cancelledReservationIds.has(String(reservation.id)),
+        );
+
+        const hasOverlap = activeReservations.some((reservation) =>
+          reservationsOverlap(
+            checkInTs,
+            checkOutTs,
+            Number(reservation.checkInDate),
+            Number(reservation.checkOutDate),
+          ),
+        );
+
+        return !hasOverlap;
+      });
+    }
+
+    return res.json({
+      success: true,
+      listings: result,
+    });
+  } catch (err) {
+    console.error("Greška kod search-listings:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Greška kod napredne pretrage oglasa.",
       error: err.message,
     });
   }

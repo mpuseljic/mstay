@@ -5,6 +5,7 @@ import AppNavbar from '../components/layout/AppNavbar.vue'
 import ListingCard from '../components/listings/ListingCard.vue'
 import { useMstay } from '../composables/useMstay'
 import AppFooter from '@/components/layout/AppFooter.vue'
+import { searchListings } from '@/services/search'
 
 const router = useRouter()
 
@@ -18,7 +19,13 @@ const filters = ref({
   minRating: '',
   onlyActive: true,
   sortBy: 'newest',
+  checkIn: '',
+  checkOut: '',
 })
+
+const searchedListings = ref([])
+const isSearching = ref(false)
+const searchError = ref('')
 
 const locationOptions = computed(() => {
   const unique = [...new Set(listings.value.map((x) => x.location).filter(Boolean))]
@@ -28,35 +35,7 @@ const locationOptions = computed(() => {
 const selectedLocation = ref('')
 
 const filteredListings = computed(() => {
-  let result = [...listings.value]
-
-  if (filters.value.search.trim()) {
-    const q = filters.value.search.trim().toLowerCase()
-    result = result.filter(
-      (listing) =>
-        listing.title.toLowerCase().includes(q) || listing.location.toLowerCase().includes(q),
-    )
-  }
-
-  if (selectedLocation.value) {
-    result = result.filter((listing) => listing.location === selectedLocation.value)
-  }
-
-  if (filters.value.maxPrice !== '') {
-    result = result.filter(
-      (listing) => Number(listing.pricePerNight) <= Number(filters.value.maxPrice),
-    )
-  }
-
-  if (filters.value.minRating !== '') {
-    result = result.filter(
-      (listing) => Number(listing.averageRating || 0) >= Number(filters.value.minRating),
-    )
-  }
-
-  if (filters.value.onlyActive) {
-    result = result.filter((listing) => listing.isActive)
-  }
+  let result = [...searchedListings.value]
 
   switch (filters.value.sortBy) {
     case 'price-asc':
@@ -90,16 +69,44 @@ function resetFilters() {
     minRating: '',
     onlyActive: true,
     sortBy: 'newest',
+    checkIn: '',
+    checkOut: '',
   }
   selectedLocation.value = ''
+  searchedListings.value = [...listings.value]
+  searchError.value = ''
 }
 
 function handleReserve(listing) {
   router.push(`/listings/${listing.id}`)
 }
 
+async function runSearch() {
+  try {
+    isSearching.value = true
+    searchError.value = ''
+
+    searchedListings.value = await searchListings({
+      listings: listings.value,
+      search: filters.value.search,
+      location: selectedLocation.value,
+      maxPrice: filters.value.maxPrice,
+      minRating: filters.value.minRating,
+      onlyActive: filters.value.onlyActive,
+      checkIn: filters.value.checkIn,
+      checkOut: filters.value.checkOut,
+    })
+  } catch (err) {
+    searchError.value = err.message || 'Greška kod pretrage.'
+    searchedListings.value = [...listings.value]
+  } finally {
+    isSearching.value = false
+  }
+}
+
 onMounted(async () => {
   await loadListings()
+  searchedListings.value = [...listings.value]
 })
 </script>
 
@@ -134,6 +141,16 @@ onMounted(async () => {
                 {{ location }}
               </option>
             </select>
+          </div>
+
+          <div class="filter-group">
+            <label>Check-in</label>
+            <input v-model="filters.checkIn" type="date" />
+          </div>
+
+          <div class="filter-group">
+            <label>Check-out</label>
+            <input v-model="filters.checkOut" type="date" />
           </div>
 
           <div class="filter-group">
@@ -181,11 +198,15 @@ onMounted(async () => {
 
         <div class="filters-actions">
           <button class="reset-btn" @click="resetFilters">Resetiraj filtere</button>
+          <button class="reset-btn reset-btn--primary" @click="runSearch" :disabled="isSearching">
+            {{ isSearching ? 'Pretražujem...' : 'Pretraži' }}
+          </button>
         </div>
       </section>
 
       <section v-if="successMsg" class="alert alert--success">{{ successMsg }}</section>
       <section v-if="errorMsg" class="alert alert--error">{{ errorMsg }}</section>
+      <section v-if="searchError" class="alert alert--error">{{ searchError }}</section>
 
       <section class="results-head">
         <div>
@@ -297,6 +318,7 @@ onMounted(async () => {
 .filters-actions {
   display: flex;
   justify-content: flex-end;
+  gap: 12px;
   margin-top: 16px;
 }
 
@@ -376,6 +398,17 @@ onMounted(async () => {
   background: #fef2f2;
   border: 1px solid #fecaca;
   color: #b91c1c;
+}
+
+@media (max-width: 700px) {
+  .filters-actions {
+    flex-direction: column;
+    justify-content: stretch;
+  }
+
+  .reset-btn {
+    width: 100%;
+  }
 }
 
 @media (max-width: 1100px) {

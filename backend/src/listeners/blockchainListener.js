@@ -7,46 +7,13 @@ import { MSTAY_CORE_ADDRESS } from "../contracts/coreConfig.js";
 import { MSTAY_REVIEWS_ADDRESS } from "../contracts/reviewsConfig.js";
 import { MSTAY_CORE_ABI } from "../contracts/mstayCoreAbi.js";
 import { MSTAY_REVIEWS_ABI } from "../contracts/mstayReviewsAbi.js";
+import { readEvents, writeEvents } from "../utils/eventsStore.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const dataDir = path.join(__dirname, "../data");
 const eventsPath = path.join(dataDir, "blockchainEvents.json");
-
-function ensureEventsFile() {
-  if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir, { recursive: true });
-  }
-
-  if (!fs.existsSync(eventsPath)) {
-    fs.writeFileSync(
-      eventsPath,
-      JSON.stringify(
-        {
-          reservations: [],
-          reviews: [],
-          payouts: [],
-          cancellations: [],
-        },
-        null,
-        2,
-      ),
-      "utf8",
-    );
-  }
-}
-
-function readEvents() {
-  ensureEventsFile();
-  const raw = fs.readFileSync(eventsPath, "utf8");
-  return JSON.parse(raw || "{}");
-}
-
-function writeEvents(data) {
-  ensureEventsFile();
-  fs.writeFileSync(eventsPath, JSON.stringify(data, null, 2), "utf8");
-}
 
 function eventAlreadyStored(items, txHash, logIndex) {
   return items.some(

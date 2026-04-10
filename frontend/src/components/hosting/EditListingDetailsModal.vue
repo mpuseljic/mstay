@@ -2,6 +2,8 @@
 import { ref, watch } from 'vue'
 import { useListingDetails } from '@/composables/useListingDetails'
 import { uploadImage } from '@/services/upload'
+import LocationPickerMap from './LocationPickerMap.vue'
+import { geocodeLocation } from '@/services/geocode'
 
 const props = defineProps({
   open: {
@@ -15,6 +17,9 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['close', 'saved'])
+const geocodeQuery = ref('')
+const isGeocoding = ref(false)
+const geocodeError = ref('')
 
 const {
   loadListingDetails,
@@ -142,6 +147,28 @@ function parseLines(text) {
     .split('\n')
     .map((line) => line.trim())
     .filter(Boolean)
+}
+
+async function handleGeocode() {
+  if (!geocodeQuery.value.trim()) return
+
+  try {
+    isGeocoding.value = true
+    geocodeError.value = ''
+
+    const result = await geocodeLocation(geocodeQuery.value)
+
+    form.value.latitude = result.latitude
+    form.value.longitude = result.longitude
+
+    if (!form.value.locationTitle) {
+      form.value.locationTitle = result.displayName
+    }
+  } catch (err) {
+    geocodeError.value = err.message || 'Greška kod pronalaska lokacije.'
+  } finally {
+    isGeocoding.value = false
+  }
 }
 
 async function handleSave() {
@@ -309,6 +336,35 @@ watch(
           <label>Longitude</label>
           <input v-model="form.longitude" type="number" step="0.000001" />
         </div>
+
+        <div class="form-group form-group--full">
+          <label>Adresa ili mjesto</label>
+
+          <div class="geocode-row">
+            <input
+              v-model="geocodeQuery"
+              type="text"
+              placeholder="Npr. Ilica 1, Zagreb ili Budimpešta, Mađarska"
+            />
+            <button class="secondary-btn" @click="handleGeocode" :disabled="isGeocoding">
+              {{ isGeocoding ? 'Tražim...' : 'Pronađi lokaciju' }}
+            </button>
+          </div>
+
+          <p v-if="geocodeError" class="geocode-error">
+            {{ geocodeError }}
+          </p>
+        </div>
+        <div class="form-group form-group--full">
+          <label>Odaberi lokaciju na mapi</label>
+
+          <LocationPickerMap
+            :latitude="form.latitude"
+            :longitude="form.longitude"
+            @update:latitude="form.latitude = $event"
+            @update:longitude="form.longitude = $event"
+          ></LocationPickerMap>
+        </div>
       </div>
 
       <div class="sleeping-section">
@@ -461,6 +517,24 @@ watch(
   max-width: 160px;
   border-radius: 12px;
   margin-top: 6px;
+}
+
+.geocode-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+}
+
+.geocode-error {
+  margin: 8px 0 0;
+  color: #b91c1c;
+  font-size: 0.92rem;
+}
+
+@media (max-width: 900px) {
+  .geocode-row {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 900px) {

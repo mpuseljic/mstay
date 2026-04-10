@@ -332,6 +332,72 @@ app.post("/api/listing-details/update", (req, res) => {
   }
 });
 
+app.post("/api/geocode", async (req, res) => {
+  try {
+    const { query } = req.body || {};
+
+    if (!query || !String(query).trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "query je obavezan.",
+      });
+    }
+
+    const searchParams = new URLSearchParams({
+      q: String(query).trim(),
+      format: "jsonv2",
+      limit: "1",
+      addressdetails: "1",
+    });
+
+    const geoRes = await fetch(
+      `https://nominatim.openstreetmap.org/search?${searchParams.toString()}`,
+      {
+        headers: {
+          "User-Agent": "mStay/1.0 (student project)",
+          "Accept-Language": "hr,en",
+        },
+      },
+    );
+
+    if (!geoRes.ok) {
+      const text = await geoRes.text();
+      return res.status(500).json({
+        success: false,
+        message: "Greška kod geocoding zahtjeva.",
+        details: text,
+      });
+    }
+
+    const results = await geoRes.json();
+
+    if (!Array.isArray(results) || !results.length) {
+      return res.status(404).json({
+        success: false,
+        message: "Lokacija nije pronađena.",
+      });
+    }
+
+    const best = results[0];
+
+    return res.json({
+      success: true,
+      result: {
+        latitude: Number(best.lat),
+        longitude: Number(best.lon),
+        displayName: best.display_name || "",
+      },
+    });
+  } catch (err) {
+    console.error("Greška kod geocodinga:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Greška kod geocodinga.",
+      error: err.message,
+    });
+  }
+});
+
 const PORT = process.env.PORT || 3001;
 
 app.listen(PORT, () => {

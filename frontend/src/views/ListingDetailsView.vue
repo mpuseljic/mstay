@@ -8,6 +8,7 @@ import ReviewCard from '@/components/reviews/ReviewCard.vue'
 import HostProfileCard from '@/components/profile/HostProfileCard.vue'
 import { useProfile } from '@/composables/useProfile'
 import { useListingDetails } from '@/composables/useListingDetails'
+import ListingMapCard from '@/components/listings/ListingMapCard.vue'
 
 const route = useRoute()
 
@@ -610,15 +611,12 @@ onMounted(async () => {
           </div>
 
           <div class="content-card" v-if="listingContent">
-            <h2>Gdje ćete biti</h2>
-
-            <p class="location-title">
-              {{ listingContent.locationTitle || listing.location }}
-            </p>
-
-            <p class="location-description">
-              {{ listingContent.locationDescription || 'Opis lokacije nije dostupan.' }}
-            </p>
+            <ListingMapCard
+              :latitude="listingContent?.latitude"
+              :longitude="listingContent?.longitude"
+              :title="listingContent?.locationTitle || listing.title"
+              :description="listingContent?.locationDescription || listing.location"
+            />
           </div>
           <div class="content-card" v-if="listingContent?.houseRules?.length">
             <h2>Kućna pravila</h2>

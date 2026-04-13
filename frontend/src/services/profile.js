@@ -1,4 +1,4 @@
-const PROFILE_API_BASE = 'http://localhost:3001/api'
+const PROFILE_API_BASE = 'https://mstay-sqd2.onrender.com/api'
 
 export async function fetchProfile(walletAddress) {
   const response = await fetch(`${PROFILE_API_BASE}/profile/${walletAddress}`)

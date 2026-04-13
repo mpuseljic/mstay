@@ -1,4 +1,4 @@
-const API_BASE = 'http://localhost:3001/api'
+const API_BASE = 'https://mstay-sqd2.onrender.com/api'
 
 export async function fetchHostAnalytics(wallet) {
   const response = await fetch(`${API_BASE}/analytics/host/${wallet}`)

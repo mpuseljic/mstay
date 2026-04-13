@@ -5,7 +5,7 @@ export async function uploadMultipleImagesToPinata(files) {
     const formData = new FormData()
     formData.append('file', file)
 
-    const response = await fetch('http://localhost:3001/api/upload-image', {
+    const response = await fetch('https://mstay-sqd2.onrender.com/api/upload-image', {
       method: 'POST',
       body: formData,
     })
@@ -26,7 +26,7 @@ export async function uploadImage(file) {
   const formData = new FormData()
   formData.append('file', file)
 
-  const response = await fetch('http://localhost:3001/api/upload-image', {
+  const response = await fetch('https://mstay-sqd2.onrender.com/api/upload-image', {
     method: 'POST',
     body: formData,
   })

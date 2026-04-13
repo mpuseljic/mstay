@@ -78,10 +78,26 @@ export function startBlockchainListener() {
             return;
           }
 
+          let host = null;
+
+          // OPCIJA B:
+          // Dohvat hosta direktno iz contracta po listingId
+          try {
+            if (typeof coreContract.getListingHost === "function") {
+              host = await coreContract.getListingHost(listingId);
+            } else if (typeof coreContract.listings === "function") {
+              const listing = await coreContract.listings(listingId);
+              host = listing?.host || null;
+            }
+          } catch (err) {
+            console.error("Greška kod dohvaćanja hosta za listing:", err);
+          }
+
           data.reservations.push({
             id: id.toString(),
             listingId: listingId.toString(),
             guest,
+            host,
             checkInDate: checkInDate.toString(),
             checkOutDate: checkOutDate.toString(),
             totalPrice: totalPrice.toString(),

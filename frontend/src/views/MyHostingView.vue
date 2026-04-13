@@ -6,6 +6,7 @@ import AppFooter from '../components/layout/AppFooter.vue'
 import ReservationCard from '../components/reservations/ReservationCard.vue'
 import { useMstay } from '../composables/useMstay'
 import EditListingDetailsModal from '@/components/hosting/EditListingDetailsModal.vue'
+import { fetchHostAnalytics } from '@/services/analytics'
 
 const {
   walletAddress,
@@ -34,6 +35,9 @@ const hostReviewStatus = ref([])
 const hostReviewStatusLoading = ref(true)
 const selectedListingForEdit = ref(null)
 const isEditDetailsOpen = ref(false)
+const hostAnalytics = ref(null)
+const analyticsLoading = ref(false)
+const analyticsError = ref('')
 
 const myListings = computed(() => {
   if (!walletAddress.value) return []
@@ -44,29 +48,21 @@ const myListings = computed(() => {
 })
 
 const hostingListingStats = computed(() => {
+  const breakdownMap = new Map(
+    (hostAnalytics.value?.listingsBreakdown || []).map((item) => [String(item.listingId), item]),
+  )
+
   return myListings.value.map((listing) => {
-    const relatedReservations = hostReservations.value.filter(
-      (reservation) => reservation.listingId === listing.id,
-    )
-
-    const activeReservations = relatedReservations.filter(
-      (reservation) => reservation.status === '0',
-    ).length
-
-    const earned = relatedReservations
-      .filter((reservation) => reservation.status === '3')
-      .reduce((sum, reservation) => sum + Number(reservation.totalPrice || 0), 0)
-
-    const pending = relatedReservations
-      .filter((reservation) => reservation.status === '0')
-      .reduce((sum, reservation) => sum + Number(reservation.totalPrice || 0), 0)
+    const stats = breakdownMap.get(String(listing.id))
 
     return {
       ...listing,
-      reservationsCount: relatedReservations.length,
-      activeReservationsCount: activeReservations,
-      earned,
-      pending,
+      reservationsCount: stats?.reservationsCount || 0,
+      activeReservationsCount: stats?.activeCount || 0,
+      earned: stats?.earnedEth || 0,
+      pending: stats?.pendingEth || 0,
+      completedCount: stats?.completedCount || 0,
+      cancelledCount: stats?.cancelledCount || 0,
     }
   })
 })
@@ -180,6 +176,25 @@ async function loadHostReviewStatuses() {
   hostReviewStatusLoading.value = false
 }
 
+async function loadHostAnalytics() {
+  if (!walletAddress.value) {
+    hostAnalytics.value = null
+    return
+  }
+
+  try {
+    analyticsLoading.value = true
+    analyticsError.value = ''
+
+    hostAnalytics.value = await fetchHostAnalytics(walletAddress.value)
+  } catch (err) {
+    analyticsError.value = err.message || 'Greška kod dohvaćanja analitike.'
+    hostAnalytics.value = null
+  } finally {
+    analyticsLoading.value = false
+  }
+}
+
 watch(
   () => walletAddress.value,
   async (newWallet) => {
@@ -187,10 +202,12 @@ watch(
       await loadListings()
       await loadHostReservations()
       await loadHostReviewStatuses()
+      await loadHostAnalytics()
     } else {
       hostReservations.value = []
       hostReviewStatus.value = {}
       hostReviewStatusLoading.value = false
+      hostAnalytics.value = null
     }
   },
   { immediate: true },
@@ -201,6 +218,7 @@ onMounted(async () => {
     await loadListings()
     await loadHostReservations()
     await loadHostReviewStatuses()
+    await loadHostAnalytics()
   } else {
     hostReviewStatusLoading.value = false
   }
@@ -235,25 +253,41 @@ watch(
           </p>
         </div>
 
-        <div class="hero__stats">
+        <div class="hero__stats" v-if="hostAnalytics">
           <div class="stat-card">
             <span class="stat-label">Moji oglasi</span>
-            <strong class="stat-value">{{ totalListingsCount }}</strong>
+            <strong class="stat-value">{{ hostAnalytics.totalListings }}</strong>
           </div>
 
           <div class="stat-card">
             <span class="stat-label">Ukupno rezervacija</span>
-            <strong class="stat-value">{{ totalReservationsCount }}</strong>
+            <strong class="stat-value">{{ hostAnalytics.totalReservations }}</strong>
           </div>
 
           <div class="stat-card">
             <span class="stat-label">Ukupno zarađeno</span>
-            <strong class="stat-value">{{ totalEarned.toFixed(2) }} ETH</strong>
+            <strong class="stat-value">{{ hostAnalytics.totalEarnedEth.toFixed(4) }} ETH</strong>
           </div>
 
           <div class="stat-card">
-            <span class="stat-label">Pending earnings</span>
-            <strong class="stat-value">{{ pendingEarnings.toFixed(2) }} ETH</strong>
+            <span class="stat-label">Pending</span>
+            <strong class="stat-value">{{ hostAnalytics.pendingAmountEth.toFixed(4) }} ETH</strong>
+          </div>
+
+          <div class="stat-card">
+            <span class="stat-label">Aktivne rezervacije</span>
+            <strong class="stat-value">{{ hostAnalytics.activeReservations }}</strong>
+          </div>
+
+          <div class="stat-card">
+            <span class="stat-label">Ocjena</span>
+            <strong class="stat-value">
+              {{
+                hostAnalytics.totalReviewsReceived
+                  ? `${hostAnalytics.averageRating.toFixed(1)} ★`
+                  : '—'
+              }}
+            </strong>
           </div>
         </div>
       </section>

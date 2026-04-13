@@ -7,6 +7,11 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { startBlockchainListener } from "./listeners/blockchainListener.js";
 import { readEvents } from "./utils/eventsStore.js";
+import {
+  normalizeAddress,
+  calculateAverageRating,
+  formatEthFromWei,
+} from "./utils/analytics.js";
 
 dotenv.config();
 
@@ -509,6 +514,128 @@ app.post("/api/search-listings", (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Greška kod napredne pretrage oglasa.",
+      error: err.message,
+    });
+  }
+});
+
+app.get("/api/analytics/host/:wallet", (req, res) => {
+  try {
+    const wallet = normalizeAddress(req.params.wallet);
+    const events = readEvents();
+
+    const reservations = Array.isArray(events.reservations)
+      ? events.reservations
+      : [];
+    const payouts = Array.isArray(events.payouts) ? events.payouts : [];
+    const cancellations = Array.isArray(events.cancellations)
+      ? events.cancellations
+      : [];
+    const reviews = Array.isArray(events.reviews) ? events.reviews : [];
+
+    const cancelledReservationIds = new Set(
+      cancellations.map((item) => String(item.id)),
+    );
+
+    const hostReservations = reservations.filter(
+      (reservation) => normalizeAddress(reservation.host) === wallet,
+    );
+
+    const completedReservationIds = new Set(
+      payouts
+        .filter((item) => normalizeAddress(item.host) === wallet)
+        .map((item) => String(item.id)),
+    );
+
+    const activeReservations = hostReservations.filter(
+      (reservation) =>
+        !cancelledReservationIds.has(String(reservation.id)) &&
+        !completedReservationIds.has(String(reservation.id)),
+    );
+
+    const completedReservations = hostReservations.filter((reservation) =>
+      completedReservationIds.has(String(reservation.id)),
+    );
+
+    const cancelledReservations = hostReservations.filter((reservation) =>
+      cancelledReservationIds.has(String(reservation.id)),
+    );
+
+    const totalEarnedWei = payouts
+      .filter((item) => normalizeAddress(item.host) === wallet)
+      .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+
+    const pendingAmountWei = activeReservations.reduce(
+      (sum, reservation) => sum + Number(reservation.totalPrice || 0),
+      0,
+    );
+
+    const { totalReviews, averageRating } = calculateAverageRating(
+      reviews,
+      wallet,
+    );
+
+    const listingsMap = new Map();
+
+    hostReservations.forEach((reservation) => {
+      const key = String(reservation.listingId);
+
+      if (!listingsMap.has(key)) {
+        listingsMap.set(key, {
+          listingId: key,
+          reservationsCount: 0,
+          completedCount: 0,
+          activeCount: 0,
+          cancelledCount: 0,
+          earnedWei: 0,
+          pendingWei: 0,
+          earnedEth: 0,
+          pendingEth: 0,
+        });
+      }
+
+      const item = listingsMap.get(key);
+      item.reservationsCount += 1;
+
+      if (cancelledReservationIds.has(String(reservation.id))) {
+        item.cancelledCount += 1;
+      } else if (completedReservationIds.has(String(reservation.id))) {
+        item.completedCount += 1;
+        item.earnedWei += Number(reservation.totalPrice || 0);
+      } else {
+        item.activeCount += 1;
+        item.pendingWei += Number(reservation.totalPrice || 0);
+      }
+
+      item.earnedEth = formatEthFromWei(item.earnedWei);
+      item.pendingEth = formatEthFromWei(item.pendingWei);
+    });
+
+    return res.json({
+      success: true,
+      analytics: {
+        hostWallet: wallet,
+        totalListings: [
+          ...new Set(hostReservations.map((x) => String(x.listingId))),
+        ].length,
+        totalReservations: hostReservations.length,
+        activeReservations: activeReservations.length,
+        completedReservations: completedReservations.length,
+        cancelledReservations: cancelledReservations.length,
+        totalEarnedWei,
+        totalEarnedEth: formatEthFromWei(totalEarnedWei),
+        pendingAmountWei,
+        pendingAmountEth: formatEthFromWei(pendingAmountWei),
+        totalReviewsReceived: totalReviews,
+        averageRating,
+        listingsBreakdown: Array.from(listingsMap.values()),
+      },
+    });
+  } catch (err) {
+    console.error("Greška kod host analytics:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Greška kod dohvaćanja host analitike.",
       error: err.message,
     });
   }

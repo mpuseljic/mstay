@@ -41,3 +41,8 @@ export function writeEvents(data) {
   ensureEventsFile();
   fs.writeFileSync(eventsPath, JSON.stringify(data, null, 2), "utf8");
 }
+
+export function getEventPath() {
+  ensureEventsFile();
+  return eventsPath;
+}

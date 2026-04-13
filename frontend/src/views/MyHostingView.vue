@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import AppNavbar from '../components/layout/AppNavbar.vue'
 import AppFooter from '../components/layout/AppFooter.vue'
@@ -31,8 +31,8 @@ const reviewForm = ref({
 
 const reviewMessage = ref('')
 const reviewError = ref('')
-const hostReviewStatus = ref([])
-const hostReviewStatusLoading = ref(true)
+const hostReviewStatus = ref({})
+const hostReviewStatusLoading = ref(false)
 const selectedListingForEdit = ref(null)
 const isEditDetailsOpen = ref(false)
 const hostAnalytics = ref(null)
@@ -67,13 +67,8 @@ const hostingListingStats = computed(() => {
   })
 })
 
-const totalListingsCount = computed(() => {
-  return myListings.value.length
-})
-
-const totalReservationsCount = computed(() => {
-  return hostReservations.value.length
-})
+const totalListingsCount = computed(() => myListings.value.length)
+const totalReservationsCount = computed(() => hostReservations.value.length)
 
 const totalEarned = computed(() => {
   return hostReservations.value
@@ -103,7 +98,9 @@ function openListingDetailsEditor(listing) {
 }
 
 async function handleListingDetailsSaved() {
+  isEditDetailsOpen.value = false
   await loadListings()
+  await loadHostAnalytics()
 }
 
 function canReviewReservation(reservation) {
@@ -116,11 +113,14 @@ function canReviewReservation(reservation) {
 async function handleHostCancel(id) {
   await cancelReservationByHost(Number(id))
   await loadHostReservations()
+  await loadHostReviewStatuses()
+  await loadHostAnalytics()
 }
 
 async function handleHostPayout(id) {
   await releasePayout(Number(id))
   await loadHostReservations()
+  await loadHostAnalytics()
 }
 
 function openHostReviewForm(reservationId) {
@@ -146,8 +146,8 @@ async function handleHostReview() {
     )
 
     reviewMessage.value = 'Recenzija za gosta je uspješno spremljena.'
-
     hostReviewStatus.value[reviewForm.value.reservationId] = true
+
     reviewForm.value = {
       reservationId: '',
       rating: 5,
@@ -155,6 +155,7 @@ async function handleHostReview() {
     }
 
     await loadHostReservations()
+    await loadHostAnalytics()
   } catch (err) {
     reviewError.value = err.message || 'Greška pri spremanju recenzije.'
   }
@@ -162,18 +163,23 @@ async function handleHostReview() {
 
 async function loadHostReviewStatuses() {
   hostReviewStatusLoading.value = true
-  const result = {}
 
-  for (const reservation of hostReservations.value) {
-    try {
-      const alreadyLeft = await hasHostLeftReview(Number(reservation.id))
-      result[reservation.id] = alreadyLeft
-    } catch {
-      result[reservation.id] = false
-    }
+  try {
+    const entries = await Promise.all(
+      hostReservations.value.map(async (reservation) => {
+        try {
+          const alreadyLeft = await hasHostLeftReview(Number(reservation.id))
+          return [reservation.id, alreadyLeft]
+        } catch {
+          return [reservation.id, false]
+        }
+      }),
+    )
+
+    hostReviewStatus.value = Object.fromEntries(entries)
+  } finally {
+    hostReviewStatusLoading.value = false
   }
-  hostReviewStatus.value = result
-  hostReviewStatusLoading.value = false
 }
 
 async function loadHostAnalytics() {
@@ -185,7 +191,6 @@ async function loadHostAnalytics() {
   try {
     analyticsLoading.value = true
     analyticsError.value = ''
-
     hostAnalytics.value = await fetchHostAnalytics(walletAddress.value)
   } catch (err) {
     analyticsError.value = err.message || 'Greška kod dohvaćanja analitike.'
@@ -198,43 +203,20 @@ async function loadHostAnalytics() {
 watch(
   () => walletAddress.value,
   async (newWallet) => {
-    if (newWallet) {
-      await loadListings()
-      await loadHostReservations()
-      await loadHostReviewStatuses()
-      await loadHostAnalytics()
-    } else {
+    if (!newWallet) {
       hostReservations.value = []
       hostReviewStatus.value = {}
       hostReviewStatusLoading.value = false
       hostAnalytics.value = null
+      return
     }
-  },
-  { immediate: true },
-)
 
-onMounted(async () => {
-  if (walletAddress.value) {
     await loadListings()
     await loadHostReservations()
     await loadHostReviewStatuses()
     await loadHostAnalytics()
-  } else {
-    hostReviewStatusLoading.value = false
-  }
-})
-
-watch(
-  () => hostReservations.value,
-  async () => {
-    if (hostReservations.value.length) {
-      await loadHostReservations()
-    } else {
-      hostReservations.value = {}
-      hostReviewStatusLoading.value = false
-    }
   },
-  { deep: true },
+  { immediate: true },
 )
 </script>
 

@@ -1,11 +1,16 @@
-async function main() {
-  const Core = await ethers.getContractFactory("MStayCore");
-  const core = await Core.deploy();
+import hre from "hardhat";
 
+async function main() {
+  const { ethers } = hre;
+  const [deployer] = await ethers.getSigners();
+
+  console.log("Deploying with:", deployer.address);
+
+  const MStayCore = await ethers.getContractFactory("MStayCore");
+  const core = await MStayCore.deploy();
   await core.waitForDeployment();
 
-  const address = await core.getAddress();
-  console.log("mStayCore deployed to:", address);
+  console.log("MStayCore deployed to:", await core.getAddress());
 }
 
 main().catch((error) => {

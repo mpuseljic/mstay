@@ -298,6 +298,106 @@ export function startBlockchainListener() {
         console.error("Greška kod ReservationCancelledByHost listenera:", err);
       }
     });
+
+    coreContract.on(
+      "RewardGranted",
+      async (user, amount, reason, eventPayload) => {
+        try {
+          const data = readEvents();
+
+          if (!Array.isArray(data.rewards)) {
+            data.rewards = [];
+          }
+
+          const transactionHash =
+            eventPayload?.log?.transactionHash ||
+            eventPayload?.transactionHash ||
+            null;
+
+          const logIndex =
+            eventPayload?.log?.index ?? eventPayload?.index ?? null;
+
+          const blockNumber =
+            eventPayload?.log?.blockNumber ?? eventPayload?.blockNumber ?? null;
+
+          if (
+            transactionHash &&
+            logIndex !== null &&
+            data.rewards.some(
+              (item) =>
+                item.transactionHash === transactionHash &&
+                Number(item.logIndex) === Number(logIndex),
+            )
+          ) {
+            return;
+          }
+
+          data.rewards.push({
+            user,
+            amount: amount.toString(),
+            reason,
+            transactionHash,
+            logIndex,
+            blockNumber,
+            capturedAt: new Date().toISOString(),
+          });
+
+          writeEvents(data);
+        } catch (err) {
+          console.error("Greška kod RewardGranted listenera:", err);
+        }
+      },
+    );
+
+    coreContract.on(
+      "DiscountUsed",
+      async (user, tokenAmount, discountAmount, eventPayload) => {
+        try {
+          const data = readEvents();
+
+          if (!Array.isArray(data.discounts)) {
+            data.discounts = [];
+          }
+
+          const transactionHash =
+            eventPayload?.log?.transactionHash ||
+            eventPayload?.transactionHash ||
+            null;
+
+          const logIndex =
+            eventPayload?.log?.index ?? eventPayload?.index ?? null;
+
+          const blockNumber =
+            eventPayload?.log?.blockNumber ?? eventPayload?.blockNumber ?? null;
+
+          if (
+            transactionHash &&
+            logIndex !== null &&
+            data.discounts.some(
+              (item) =>
+                item.transactionHash === transactionHash &&
+                Number(item.logIndex) === Number(logIndex),
+            )
+          ) {
+            return;
+          }
+
+          data.discounts.push({
+            user,
+            tokenAmount: tokenAmount.toString(),
+            discountAmount: discountAmount.toString(),
+            transactionHash,
+            logIndex,
+            blockNumber,
+            capturedAt: new Date().toISOString(),
+          });
+
+          writeEvents(data);
+        } catch (err) {
+          console.error("Greška kod DiscountUsed listenera:", err);
+        }
+      },
+    );
   } catch (err) {
     console.error("Greška kod pokretanja blockchain listenera:", err);
   }

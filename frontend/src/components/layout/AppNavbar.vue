@@ -1,6 +1,7 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
+import { useMstay } from '@/composables/useMstay'
 
 const props = defineProps({
   walletAddress: {
@@ -12,6 +13,7 @@ const props = defineProps({
 const emit = defineEmits(['connect'])
 
 const route = useRoute()
+const { tokenBalance, loadTokenBalance } = useMstay()
 
 const shortWallet = computed(() => {
   if (!props.walletAddress) return 'Spoji MetaMask'
@@ -21,6 +23,12 @@ const shortWallet = computed(() => {
 function isActive(path) {
   return route.path === path
 }
+
+onMounted(() => {
+  if (props.walletAddress) {
+    loadTokenBalance()
+  }
+})
 </script>
 
 <template>
@@ -71,9 +79,15 @@ function isActive(path) {
         </RouterLink>
       </nav>
 
-      <button class="wallet-btn" @click="$emit('connect')">
-        {{ shortWallet }}
-      </button>
+      <div class="navbar__actions">
+        <div v-if="props.walletAddress" class="mst-badge">
+          MST: {{ Number(tokenBalance).toFixed(2) }}
+        </div>
+
+        <button class="wallet-btn" @click="$emit('connect')">
+          {{ shortWallet }}
+        </button>
+      </div>
     </div>
   </header>
 </template>
@@ -152,6 +166,35 @@ function isActive(path) {
   color: white;
   font-weight: 700;
   cursor: pointer;
+}
+
+.navbar__actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.mst-badge {
+  border-radius: 999px;
+  padding: 10px 14px;
+  background: #fff7ed;
+  color: #9a3412;
+  font-weight: 800;
+  border: 1px solid #fed7aa;
+  white-space: nowrap;
+}
+
+@media (max-width: 980px) {
+  .navbar__actions {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .mst-badge,
+  .wallet-btn {
+    width: 100%;
+    text-align: center;
+  }
 }
 
 @media (max-width: 980px) {

@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, onMounted, watch, onBeforeUnmount } from 'vue'
+import { parseEther } from 'ethers'
 import { useRoute } from 'vue-router'
 import AppNavbar from '../components/layout/AppNavbar.vue'
 import { useMstay } from '../composables/useMstay'
@@ -24,6 +25,10 @@ const {
   checkDateAvailability,
   loadReviewsForUser,
   fetchReservationsByListing,
+  tokenBalance,
+  loadTokenBalance,
+  approveDiscountTokens,
+  makeReservationWithDiscount,
 } = useMstay()
 
 const { loadProfile } = useProfile()
@@ -44,6 +49,11 @@ const isDescriptionModalOpen = ref(false)
 const isAmenitiesModalOpen = ref(false)
 
 const isCheckoutOpen = ref(false)
+
+const isDiscountApproved = ref(false)
+const useDiscountBooking = ref(false)
+const discountTokenCost = 50
+const discountPercent = 10
 
 const reservationForm = ref({
   checkIn: '',
@@ -204,6 +214,57 @@ async function confirmReservation() {
   }
 }
 
+async function handleApproveDiscount() {
+  try {
+    bookingError.value = ''
+    await approveDiscountTokens(parseEther(String(discountTokenCost)))
+    isDiscountApproved.value = true
+    await loadTokenBalance()
+  } catch (err) {
+    bookingError.value = err.message || 'Greška kod odobravanja tokena za popust.'
+  }
+}
+
+async function confirmReservationWithDiscount() {
+  if (!walletAddress.value || !listing.value) return
+
+  bookingError.value = ''
+  bookingSuccess.value = ''
+
+  const checkInTs = toUnixTimestamp(reservationForm.value.checkIn)
+  const checkOutTs = toUnixTimestamp(reservationForm.value.checkOut)
+
+  try {
+    isBooking.value = true
+
+    const isAvailable = await checkDateAvailability(Number(listing.value.id), checkInTs, checkOutTs)
+
+    if (!isAvailable) {
+      bookingError.value = 'Odabrani datumi nisu dostupni za ovaj smještaj. Odaberi drugi termin.'
+      bookingSuccess.value = ''
+      isCheckoutOpen.value = false
+      return
+    }
+
+    await makeReservationWithDiscount(Number(listing.value.id), checkInTs, checkOutTs)
+
+    bookingSuccess.value = 'Rezervacija s loyalty popustom je uspješno kreirana.'
+    bookingError.value = ''
+
+    reservationForm.value.checkIn = ''
+    reservationForm.value.checkOut = ''
+    reservationPricePreview.value = '0'
+    selectedRange.value = { start: null, end: null }
+    isCheckoutOpen.value = false
+    isDiscountApproved.value = false
+    useDiscountBooking.value = false
+
+    await Promise.all([loadCurrentListing(), loadTokenBalance()])
+  } finally {
+    isBooking.value = false
+  }
+}
+
 const checkoutSummary = computed(() => {
   return {
     title: listing.value?.title || '',
@@ -214,6 +275,18 @@ const checkoutSummary = computed(() => {
     nights: reservationNights.value,
     total: reservationPricePreview.value || '0',
   }
+})
+
+const hasEnoughDiscountTokens = computed(() => {
+  return Number(tokenBalance.value || 0) >= discountTokenCost
+})
+
+const discountedReservationPrice = computed(() => {
+  const total = Number(reservationPricePreview.value || 0)
+  if (!total) return '0'
+
+  const discounted = total * (1 - discountPercent / 100)
+  return discounted.toFixed(6)
 })
 
 function setActiveImage(image) {
@@ -395,7 +468,7 @@ watch(
 )
 
 onMounted(async () => {
-  await loadCurrentListing()
+  await Promise.all([loadCurrentListing(), loadTokenBalance()])
 })
 </script>
 
@@ -675,6 +748,46 @@ onMounted(async () => {
               </div>
             </div>
 
+            <div v-if="reservationNights > 0" class="loyalty-box">
+              <div class="loyalty-box__top">
+                <strong>Loyalty popust</strong>
+                <span>MST balans: {{ Number(tokenBalance).toFixed(2) }}</span>
+              </div>
+
+              <p class="loyalty-box__text">
+                Iskoristi {{ discountTokenCost }} MST za {{ discountPercent }}% popusta na ovu
+                rezervaciju.
+              </p>
+
+              <div class="loyalty-price-row">
+                <span>Cijena s popustom</span>
+                <strong>{{ discountedReservationPrice }} ETH</strong>
+              </div>
+
+              <label class="loyalty-check">
+                <input
+                  v-model="useDiscountBooking"
+                  type="checkbox"
+                  :disabled="!hasEnoughDiscountTokens"
+                />
+                <span>Želim koristiti loyalty popust</span>
+              </label>
+
+              <button
+                v-if="useDiscountBooking && !isDiscountApproved"
+                class="approve-btn"
+                type="button"
+                @click="handleApproveDiscount"
+                :disabled="!hasEnoughDiscountTokens || isBooking"
+              >
+                Approve {{ discountTokenCost }} MST
+              </button>
+
+              <div v-if="useDiscountBooking && !hasEnoughDiscountTokens" class="loyalty-warning">
+                Nemaš dovoljno MST tokena za loyalty popust.
+              </div>
+            </div>
+
             <div v-if="bookingError" class="booking-message booking-message--error">
               {{ bookingError }}
             </div>
@@ -691,11 +804,18 @@ onMounted(async () => {
                 isOwnListing ||
                 !listing.isActive ||
                 !reservationForm.checkIn ||
-                !reservationForm.checkOut
+                !reservationForm.checkOut ||
+                (useDiscountBooking && !isDiscountApproved)
               "
             >
               {{
-                isOwnListing ? 'Vlastiti oglas' : isBooking ? 'Slanje transakcije...' : 'Rezerviraj'
+                isOwnListing
+                  ? 'Vlastiti oglas'
+                  : isBooking
+                    ? 'Slanje transakcije...'
+                    : useDiscountBooking
+                      ? 'Rezerviraj s popustom'
+                      : 'Rezerviraj'
               }}
             </button>
 
@@ -812,7 +932,12 @@ onMounted(async () => {
 
               <div class="checkout-total">
                 <span>Ukupno za platiti</span>
-                <strong>{{ checkoutSummary.total }} ETH</strong>
+                <strong
+                  >{{
+                    useDiscountBooking ? discountedReservationPrice : checkoutSummary.total
+                  }}
+                  ETH</strong
+                >
               </div>
 
               <div class="checkout-note">
@@ -827,8 +952,20 @@ onMounted(async () => {
               <div class="checkout-actions">
                 <button class="checkout-secondary" @click="isCheckoutOpen = false">Odustani</button>
 
-                <button class="checkout-primary" @click="confirmReservation" :disabled="isBooking">
-                  {{ isBooking ? 'Slanje transakcije...' : 'Potvrdi rezervaciju' }}
+                <button
+                  class="checkout-primary"
+                  @click="
+                    useDiscountBooking ? confirmReservationWithDiscount() : confirmReservation()
+                  "
+                  :disabled="isBooking"
+                >
+                  {{
+                    isBooking
+                      ? 'Slanje transakcije...'
+                      : useDiscountBooking
+                        ? 'Potvrdi rezervaciju s popustom'
+                        : 'Potvrdi rezervaciju'
+                  }}
                 </button>
               </div>
             </div>
@@ -1860,6 +1997,80 @@ input {
 
 .amenities-grid--modal {
   margin-bottom: 0;
+}
+
+.loyalty-box {
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-radius: 16px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+}
+
+.loyalty-box__top {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.loyalty-box__top strong {
+  color: #9a3412;
+}
+
+.loyalty-box__top span {
+  color: #7c2d12;
+  font-weight: 700;
+  font-size: 0.92rem;
+}
+
+.loyalty-box__text {
+  margin: 0 0 12px !important;
+  color: #7c2d12 !important;
+  line-height: 1.6;
+}
+
+.loyalty-price-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  font-weight: 700;
+  color: #7c2d12;
+}
+
+.loyalty-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  font-weight: 600;
+  color: #7c2d12;
+}
+
+.approve-btn {
+  width: 100%;
+  border: 0;
+  border-radius: 14px;
+  padding: 13px 14px;
+  background: #9a3412;
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.approve-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.loyalty-warning {
+  margin-top: 8px;
+  font-size: 0.9rem;
+  color: #b91c1c;
+  font-weight: 600;
 }
 
 @media (max-width: 900px) {

@@ -10,6 +10,7 @@ module.exports = {
         runs: 50,
       },
       viaIR: true,
+      evmVersion: "cancun",
     },
   },
   networks: {

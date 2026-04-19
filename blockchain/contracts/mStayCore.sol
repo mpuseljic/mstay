@@ -1,9 +1,33 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
+interface IMStayCoin {
+    function mint(address to, uint256 amount) external;
+    function burnFrom(address account, uint256 amount) external;
+    function balanceOf(address account) external view returns (uint256);
+}
+
 contract MStayCore {
     uint256 public listingCount;
     uint256 public reservationCount;
+
+    address public owner;
+    IMStayCoin public rewardToken;
+
+    uint256 public guestRewardPerReservation = 10 * 10**18;
+    uint256 public hostRewardPerPayout = 20 * 10**18;
+
+    uint256 public discountTokenCost = 50 * 10**18; // 50 MST
+    uint256 public discountBps = 1000; // 10%
+
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Only owner");
+        _;
+    }
+
+        constructor() {
+        owner = msg.sender;
+    }
 
     enum ReservationStatus {
         Active,
@@ -60,6 +84,8 @@ contract MStayCore {
     event ReservationCancelledByHost(uint256 indexed reservationId);
     event RefundIssued(uint256 indexed reservationId, address indexed guest, uint256 amount);
     event PayoutReleased(uint256 indexed reservationId, address indexed host, uint256 amount);
+    event RewardGranted(address indexed user, uint256 amount, string reason);
+    event DiscountUsed(address indexed user, uint256 tokenAmount, uint256 discountAmount);
 
     function createListing(
         string memory _title,
@@ -184,6 +210,11 @@ contract MStayCore {
             nights,
             totalPrice
         );
+
+                if (address(rewardToken) != address(0) && guestRewardPerReservation > 0) {
+            rewardToken.mint(msg.sender, guestRewardPerReservation);
+            emit RewardGranted(msg.sender, guestRewardPerReservation, "reservation");
+        }
     }
 
     function cancelReservationByGuest(uint256 _reservationId) public {
@@ -242,6 +273,11 @@ contract MStayCore {
         require(success, "Payout failed");
 
         emit PayoutReleased(_reservationId, listing.host, payoutAmount);
+
+                if (address(rewardToken) != address(0) && hostRewardPerPayout > 0) {
+            rewardToken.mint(listing.host, hostRewardPerPayout);
+            emit RewardGranted(listing.host, hostRewardPerPayout, "payout");
+        }
     }
 
     function getAllListings() public view returns (Listing[] memory) {
@@ -340,4 +376,84 @@ contract MStayCore {
 
     return result;
 }
+
+    function setRewardToken(address _tokenAddress) external onlyOwner {
+        rewardToken = IMStayCoin(_tokenAddress);
+    }
+
+    function setGuestRewardPerReservation(uint256 _amount) external onlyOwner {
+        guestRewardPerReservation = _amount;
+    }
+
+    function setHostRewardPerPayout(uint256 _amount) external onlyOwner {
+        hostRewardPerPayout = _amount;
+    }
+
+    function setDiscountTokenCost(uint256 _amount) external onlyOwner {
+        discountTokenCost = _amount;
+    }
+
+    function setDiscountBps(uint256 _bps) external onlyOwner {
+        require(_bps <= 5000, "Discount too high"); // max 50%
+        discountBps = _bps;
+    }
+
+        function makeReservationWithDiscount(
+        uint256 _listingId,
+        uint256 _checkInDate,
+        uint256 _checkOutDate
+    ) public payable {
+        require(_listingId > 0 && _listingId <= listingCount, "Listing does not exist");
+        require(listings[_listingId].isActive, "Listing is not active");
+        require(listings[_listingId].host != msg.sender, "Host cannot reserve own listing");
+        require(_checkOutDate > _checkInDate, "Invalid dates");
+        require(
+            isDateRangeAvailable(_listingId, _checkInDate, _checkOutDate),
+            "Selected dates are not available"
+        );
+        require(address(rewardToken) != address(0), "Reward token not set");
+
+        (uint256 nights, uint256 totalPrice) = calculateReservationPrice(
+            _listingId,
+            _checkInDate,
+            _checkOutDate
+        );
+
+        uint256 discountAmount = (totalPrice * discountBps) / 10000;
+        uint256 finalPrice = totalPrice - discountAmount;
+
+        rewardToken.burnFrom(msg.sender, discountTokenCost);
+
+        require(msg.value == finalPrice, "Incorrect ETH amount sent");
+
+        reservationCount++;
+
+        reservations[reservationCount] = Reservation({
+            id: reservationCount,
+            listingId: _listingId,
+            guest: payable(msg.sender),
+            checkInDate: _checkInDate,
+            checkOutDate: _checkOutDate,
+            nights: nights,
+            totalPrice: finalPrice,
+            status: ReservationStatus.Active
+        });
+
+        emit ReservationCreated(
+            reservationCount,
+            _listingId,
+            msg.sender,
+            _checkInDate,
+            _checkOutDate,
+            nights,
+            finalPrice
+        );
+
+        emit DiscountUsed(msg.sender, discountTokenCost, discountAmount);
+
+        if (guestRewardPerReservation > 0) {
+            rewardToken.mint(msg.sender, guestRewardPerReservation);
+            emit RewardGranted(msg.sender, guestRewardPerReservation, "reservation_with_discount");
+        }
+    }
 }

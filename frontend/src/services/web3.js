@@ -3,6 +3,8 @@ import { MSTAY_CORE_ADDRESS } from '../../../backend/src/contracts/coreConfig'
 import { MSTAY_REVIEWS_ADDRESS } from '../../../backend/src/contracts/reviewsConfig'
 import { MSTAY_CORE_ABI } from '../../../backend/src/contracts/mstayCoreAbi'
 import { MSTAY_REVIEWS_ABI } from '../../../backend/src/contracts/mstayReviewsAbi'
+import { MSTAY_COIN_ADDRESS } from '../../../backend/src/contracts/mStayCoinConfig'
+import { MSTAY_COIN_ABI } from '../../../backend/src/contracts/mStayCoinAbi'
 
 export async function connectWallet() {
   if (!window.ethereum) {
@@ -44,6 +46,17 @@ export async function getMStayReviewsContract(withSigner = false) {
   }
 
   return new Contract(MSTAY_REVIEWS_ADDRESS, MSTAY_REVIEWS_ABI, provider)
+}
+
+export async function getMStayCoinContract(withSigner = false) {
+  const provider = await getProvider()
+
+  if (withSigner) {
+    const signer = await provider.getSigner()
+    return new Contract(MSTAY_COIN_ADDRESS, MSTAY_COIN_ABI, signer)
+  }
+
+  return new Contract(MSTAY_COIN_ADDRESS, MSTAY_COIN_ABI, provider)
 }
 
 export async function createListing(title, location, imageUrls, pricePerNight) {
@@ -152,4 +165,37 @@ export async function fetchReviewSummaryForUser(userAddress) {
 export async function fetchReservationsByListing(listingId) {
   const contract = await getMStayCoreContract(false)
   return await contract.getReservationsByListing(listingId)
+}
+
+export async function fetchTokenBalance(walletAddress) {
+  const contract = await getMStayCoinContract(false)
+  return await contract.balanceOf(walletAddress)
+}
+
+export async function approveDiscountTokens(amountWei) {
+  const contract = await getMStayCoinContract(true)
+  const tx = await contract.approve(MSTAY_CORE_ADDRESS, amountWei)
+  await tx.wait()
+  return tx
+}
+
+export async function makeReservationWithDiscount(listingId, checkInDate, checkOutDate) {
+  const contract = await getMStayCoreContract(true)
+
+  const [, totalPriceWei] = await contract.calculateReservationPrice(
+    listingId,
+    checkInDate,
+    checkOutDate,
+  )
+
+  const discountBps = await contract.discountBps()
+  const discountAmount = (totalPriceWei * discountBps) / 10000n
+  const finalPrice = totalPriceWei - discountAmount
+
+  const tx = await contract.makeReservationWithDiscount(listingId, checkInDate, checkOutDate, {
+    value: finalPrice,
+  })
+
+  await tx.wait()
+  return tx
 }

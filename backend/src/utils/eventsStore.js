@@ -22,6 +22,8 @@ function ensureEventsFile() {
           reviews: [],
           payouts: [],
           cancellations: [],
+          rewards: [],
+          discounts: [],
         },
         null,
         2,

@@ -19,6 +19,9 @@ import {
   hasHostLeftReview,
   fetchReviewSummaryForUser,
   fetchReservationsByListing,
+  makeReservationWithDiscount,
+  fetchTokenBalance,
+  approveDiscountTokens,
 } from '../services/web3'
 
 const walletAddress = ref('')
@@ -28,6 +31,7 @@ const myReservations = ref([])
 const hostReservations = ref([])
 const successMsg = ref('')
 const errorMsg = ref('')
+const tokenBalance = ref('0')
 
 function formatDate(unix) {
   return new Date(Number(unix) * 1000).toLocaleDateString('hr-HR')
@@ -49,6 +53,7 @@ async function connectCurrentWallet() {
       loadListings(),
       loadMyReservations(),
       loadHostReservations(),
+      loadTokenBalance(),
     ])
   } catch (err) {
     errorMsg.value = err.message || 'Greška pri spajanju MetaMaska.'
@@ -171,6 +176,17 @@ async function loadReviewsForUser(userAddress) {
   }
 }
 
+async function loadTokenBalance() {
+  try {
+    if (!walletAddress.value) return
+
+    const raw = await fetchTokenBalance(walletAddress.value)
+    tokenBalance.value = fromWeiToEth(raw)
+  } catch (err) {
+    errorMsg.value = err.message || 'Greška pri dohvaćanju token balansa.'
+  }
+}
+
 export function useMstay() {
   return {
     walletAddress,
@@ -198,5 +214,9 @@ export function useMstay() {
     hasHostLeftReview,
     fetchReviewSummaryForUser,
     fetchReservationsByListing,
+    tokenBalance,
+    loadTokenBalance,
+    approveDiscountTokens,
+    makeReservationWithDiscount,
   }
 }

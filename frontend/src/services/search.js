@@ -1,4 +1,5 @@
-const API_BASE = 'https://mstay-sqd2.onrender.com/api'
+// const API_BASE = 'https://mstay-sqd2.onrender.com/api'
+const API_BASE = 'http://localhost:3001/api'
 
 export async function searchListings(payload) {
   const response = await fetch(`${API_BASE}/search-listings`, {

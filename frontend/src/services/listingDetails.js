@@ -1,4 +1,5 @@
-const LISTING_DETAILS_API_BASE = 'https://mstay-sqd2.onrender.com/api'
+// const LISTING_DETAILS_API_BASE = 'https://mstay-sqd2.onrender.com/api'
+const LISTING_DETAILS_API_BASE = 'http://localhost:3001/api'
 
 export async function fetchListingDetails(listingId) {
   const response = await fetch(`${LISTING_DETAILS_API_BASE}/listing-details/${listingId}`)

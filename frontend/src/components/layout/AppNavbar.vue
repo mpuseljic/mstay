@@ -13,18 +13,52 @@ const props = defineProps({
 const emit = defineEmits(['connect'])
 
 const route = useRoute()
-const { tokenBalance, loadTokenBalance } = useMstay()
+const {
+  tokenBalance,
+  loadTokenBalance,
+  isMetaMaskInstalled,
+  isCorrectNetwork,
+  onboardingMsg,
+  switchToRequiredNetwork,
+  getMetaMaskDownloadUrl,
+  loadWalletEnvironment,
+} = useMstay()
 
 const shortWallet = computed(() => {
   if (!props.walletAddress) return 'Spoji MetaMask'
   return `${props.walletAddress.slice(0, 6)}...${props.walletAddress.slice(-4)}`
 })
 
+const walletButtonLabel = computed(() => {
+  if (!isMetaMaskInstalled.value) return 'Instaliraj MetaMask'
+  if (!props.walletAddress) return 'Spoji MetaMask'
+  if (!isCorrectNetwork.value) return 'Promijeni mrežu'
+  return shortWallet.value
+})
+
 function isActive(path) {
   return route.path === path
 }
 
-onMounted(() => {
+function handleWalletAction() {
+  if (!isMetaMaskInstalled.value) {
+    window.open(getMetaMaskDownloadUrl(), '_blank')
+    return
+  }
+
+  if (!props.walletAddress) {
+    emit('connect')
+    return
+  }
+
+  if (!isCorrectNetwork.value) {
+    switchToRequiredNetwork()
+  }
+}
+
+onMounted(async () => {
+  await loadWalletEnvironment()
+
   if (props.walletAddress) {
     loadTokenBalance()
   }
@@ -84,9 +118,13 @@ onMounted(() => {
           MST: {{ Number(tokenBalance).toFixed(2) }}
         </div>
 
-        <button class="wallet-btn" @click="$emit('connect')">
-          {{ shortWallet }}
+        <button class="wallet-btn" @click="handleWalletAction">
+          {{ walletButtonLabel }}
         </button>
+      </div>
+
+      <div v-if="!isMetaMaskInstalled || !isCorrectNetwork || onboardingMsg" class="navbar__notice">
+        {{ onboardingMsg || 'Za korištenje mStay aplikacije potrebno je spojiti MetaMask.' }}
       </div>
     </div>
   </header>
@@ -182,6 +220,18 @@ onMounted(() => {
   font-weight: 800;
   border: 1px solid #fed7aa;
   white-space: nowrap;
+}
+
+.navbar__notice {
+  width: 100%;
+  margin-top: 8px;
+  border-radius: 14px;
+  padding: 10px 12px;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  color: #9a3412;
+  font-weight: 600;
+  font-size: 0.92rem;
 }
 
 @media (max-width: 980px) {

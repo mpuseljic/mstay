@@ -29,6 +29,8 @@ const {
   loadTokenBalance,
   approveDiscountTokens,
   makeReservationWithDiscount,
+  tryAutoReconnect,
+  setupWalletListeners,
 } = useMstay()
 
 const { loadProfile } = useProfile()
@@ -479,6 +481,9 @@ watch(canUseLoyaltyDiscount, (allowed) => {
 })
 
 onMounted(async () => {
+  setupWalletListeners()
+
+  await tryAutoReconnect()
   await Promise.all([loadCurrentListing(), loadTokenBalance()])
 })
 </script>

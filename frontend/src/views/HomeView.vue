@@ -1,10 +1,12 @@
 <script setup>
 import { computed, onMounted } from 'vue'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
 import AppNavbar from '../components/layout/AppNavbar.vue'
 import AppFooter from '../components/layout/AppFooter.vue'
 import ListingCard from '../components/listings/ListingCard.vue'
 import { useMstay } from '../composables/useMstay'
+
+const router = useRouter()
 
 const {
   walletAddress,
@@ -15,6 +17,10 @@ const {
   connectCurrentWallet,
   loadListings,
   loadListingCount,
+  tryAutoReconnect,
+  setupWalletListeners,
+  isMetaMaskInstalled,
+  isCorrectNetwork,
 } = useMstay()
 
 const featuredListings = computed(() => {
@@ -33,12 +39,13 @@ const uniqueLocationsCount = computed(() => {
 })
 
 function handleReserve(listing) {
-  window.location.href = `/listings/${listing.id}`
+  router.push(`/listings/${listing.id}`)
 }
 
 onMounted(async () => {
-  await loadListingCount()
-  await loadListings()
+  setupWalletListeners()
+
+  await Promise.all([loadListingCount(), loadListings(), tryAutoReconnect()])
 })
 </script>
 
@@ -59,6 +66,22 @@ onMounted(async () => {
           <div class="hero__actions">
             <RouterLink to="/listings" class="btn btn--primary"> Explore stays </RouterLink>
             <RouterLink to="/create-listing" class="btn btn--secondary"> Start hosting </RouterLink>
+          </div>
+
+          <div class="hero-onboarding" v-if="!walletAddress">
+            <div class="hero-onboarding__item" v-if="!isMetaMaskInstalled">
+              MetaMask nije instaliran. Instaliraj wallet kako bi mogla rezervirati i hostati
+              smještaj.
+            </div>
+
+            <div class="hero-onboarding__item" v-else-if="!isCorrectNetwork">
+              Wallet je spojen, ali na pogrešnoj mreži. Promijeni mrežu kako bi nastavila koristiti
+              aplikaciju.
+            </div>
+
+            <div class="hero-onboarding__item" v-else>
+              Wallet je spreman — spoji MetaMask za rezervacije, loyalty pogodnosti i profil.
+            </div>
           </div>
 
           <div class="hero__chips">
@@ -596,6 +619,20 @@ onMounted(async () => {
   background: white;
   color: var(--text);
   border: 1px solid var(--border);
+}
+
+.hero-onboarding {
+  margin-top: 18px;
+}
+
+.hero-onboarding__item {
+  border-radius: 16px;
+  padding: 12px 14px;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  color: #9a3412;
+  font-weight: 600;
+  line-height: 1.6;
 }
 
 @media (max-width: 1200px) {

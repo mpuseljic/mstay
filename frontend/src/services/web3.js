@@ -18,6 +18,42 @@ export async function connectWallet() {
   return accounts[0]
 }
 
+export function hasEthereumProvider() {
+  return typeof window !== 'undefined' && typeof window.ethereum !== 'undefined'
+}
+
+export function getMetaMaskDownloadUrl() {
+  return 'https://metamask.io/download/'
+}
+
+export async function getConnectedAccounts() {
+  if (!window.ethereum) return []
+  return await window.ethereum.request({
+    method: 'eth_accounts',
+  })
+}
+
+export async function getCurrentChainId() {
+  if (!window.ethereum) {
+    throw new Error('MetaMask nije instaliran.')
+  }
+
+  return await window.ethereum.request({
+    method: 'eth_chainId',
+  })
+}
+
+export async function switchToChain(chainIdHex) {
+  if (!window.ethereum) {
+    throw new Error('MetaMask nije instaliran.')
+  }
+
+  await window.ethereum.request({
+    method: 'wallet_switchEthereumChain',
+    params: [{ chainId: chainIdHex }],
+  })
+}
+
 export async function getProvider() {
   if (!window.ethereum) {
     throw new Error('MetaMask nije instaliran.')

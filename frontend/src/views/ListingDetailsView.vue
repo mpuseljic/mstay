@@ -281,6 +281,10 @@ const hasEnoughDiscountTokens = computed(() => {
   return Number(tokenBalance.value || 0) >= discountTokenCost
 })
 
+const canUseLoyaltyDiscount = computed(() => {
+  return !!walletAddress.value && hasEnoughDiscountTokens.value
+})
+
 const discountedReservationPrice = computed(() => {
   const total = Number(reservationPricePreview.value || 0)
   if (!total) return '0'
@@ -466,6 +470,13 @@ watch(
   },
   { immediate: true },
 )
+
+watch(canUseLoyaltyDiscount, (allowed) => {
+  if (!allowed) {
+    useDiscountBooking.value = false
+    isDiscountApproved.value = false
+  }
+})
 
 onMounted(async () => {
   await Promise.all([loadCurrentListing(), loadTokenBalance()])
@@ -748,44 +759,86 @@ onMounted(async () => {
               </div>
             </div>
 
-            <div v-if="reservationNights > 0" class="loyalty-box">
+            <div
+              v-if="reservationNights > 0"
+              class="loyalty-box"
+              :class="{ 'loyalty-box--locked': !canUseLoyaltyDiscount }"
+            >
               <div class="loyalty-box__top">
                 <strong>Loyalty popust</strong>
-                <span>MST balans: {{ Number(tokenBalance).toFixed(2) }}</span>
+                <span v-if="walletAddress">MST balans: {{ Number(tokenBalance).toFixed(2) }}</span>
+                <span v-else>MetaMask nije spojen</span>
               </div>
 
-              <p class="loyalty-box__text">
-                Iskoristi {{ discountTokenCost }} MST za {{ discountPercent }}% popusta na ovu
-                rezervaciju.
-              </p>
+              <template v-if="canUseLoyaltyDiscount">
+                <p class="loyalty-box__text">
+                  Iskoristi {{ discountTokenCost }} MST za {{ discountPercent }}% popusta na ovu
+                  rezervaciju.
+                </p>
 
-              <div class="loyalty-price-row">
-                <span>Cijena s popustom</span>
-                <strong>{{ discountedReservationPrice }} ETH</strong>
-              </div>
+                <div class="loyalty-price-row">
+                  <span>Cijena s popustom</span>
+                  <strong>{{ discountedReservationPrice }} ETH</strong>
+                </div>
 
-              <label class="loyalty-check">
-                <input
-                  v-model="useDiscountBooking"
-                  type="checkbox"
-                  :disabled="!hasEnoughDiscountTokens"
-                />
-                <span>Želim koristiti loyalty popust</span>
-              </label>
+                <label class="loyalty-check">
+                  <input v-model="useDiscountBooking" type="checkbox" />
+                  <span>Želim koristiti loyalty popust</span>
+                </label>
 
-              <button
-                v-if="useDiscountBooking && !isDiscountApproved"
-                class="approve-btn"
-                type="button"
-                @click="handleApproveDiscount"
-                :disabled="!hasEnoughDiscountTokens || isBooking"
-              >
-                Approve {{ discountTokenCost }} MST
-              </button>
+                <button
+                  v-if="useDiscountBooking && !isDiscountApproved"
+                  class="approve-btn"
+                  type="button"
+                  @click="handleApproveDiscount"
+                  :disabled="isBooking"
+                >
+                  Approve {{ discountTokenCost }} MST
+                </button>
+              </template>
 
-              <div v-if="useDiscountBooking && !hasEnoughDiscountTokens" class="loyalty-warning">
-                Nemaš dovoljno MST tokena za loyalty popust.
-              </div>
+              <template v-else-if="walletAddress">
+                <p class="loyalty-box__text">
+                  Loyalty popust se otključava kada sakupiš najmanje
+                  <strong>{{ discountTokenCost }} MST</strong>.
+                </p>
+
+                <div class="loyalty-lock-info">
+                  <div class="loyalty-lock-row">
+                    <span>Trenutni balans</span>
+                    <strong>{{ Number(tokenBalance).toFixed(2) }} MST</strong>
+                  </div>
+                  <div class="loyalty-lock-row">
+                    <span>Potrebno za popust</span>
+                    <strong>{{ discountTokenCost }} MST</strong>
+                  </div>
+                  <div class="loyalty-lock-row">
+                    <span>Nedostaje ti još</span>
+                    <strong
+                      >{{
+                        Math.max(0, discountTokenCost - Number(tokenBalance || 0)).toFixed(2)
+                      }}
+                      MST</strong
+                    >
+                  </div>
+                </div>
+
+                <div class="loyalty-locked-note">
+                  Nastavi rezervirati smještaj i skupljati mStayCoin tokene kako bi otključala
+                  popuste.
+                </div>
+              </template>
+
+              <template v-else>
+                <p class="loyalty-box__text">
+                  Spoji MetaMask kako bi vidjela svoj MST balans i loyalty pogodnosti.
+                </p>
+
+                <div class="loyalty-locked-note">
+                  Loyalty popust je dostupan korisnicima koji imaju najmanje
+                  {{ discountTokenCost }} MST.
+                </div>
+              </template>
             </div>
 
             <div v-if="bookingError" class="booking-message booking-message--error">
@@ -805,7 +858,7 @@ onMounted(async () => {
                 !listing.isActive ||
                 !reservationForm.checkIn ||
                 !reservationForm.checkOut ||
-                (useDiscountBooking && !isDiscountApproved)
+                (useDiscountBooking && (!canUseLoyaltyDiscount || !isDiscountApproved))
               "
             >
               {{
@@ -2071,6 +2124,45 @@ input {
   font-size: 0.9rem;
   color: #b91c1c;
   font-weight: 600;
+}
+
+.loyalty-box--locked {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+}
+
+.loyalty-box--locked .loyalty-box__top strong,
+.loyalty-box--locked .loyalty-box__text {
+  color: #374151 !important;
+}
+
+.loyalty-lock-info {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+  margin-bottom: 12px;
+}
+
+.loyalty-lock-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 10px 12px;
+  color: #374151;
+}
+
+.loyalty-locked-note {
+  border-radius: 12px;
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  padding: 12px 14px;
+  color: #3730a3;
+  font-size: 0.92rem;
+  font-weight: 600;
+  line-height: 1.5;
 }
 
 @media (max-width: 900px) {

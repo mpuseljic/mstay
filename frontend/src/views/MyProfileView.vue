@@ -16,8 +16,16 @@ const {
   fetchReviewSummaryForUser,
 } = useMstay()
 
-const { profile, profileLoading, profileError, profileSuccess, loadProfile, updateProfile } =
-  useProfile()
+const {
+  profile,
+  profileLoading,
+  profileError,
+  profileSuccess,
+  loadProfile,
+  updateProfile,
+  verifyCurrentProfile,
+  unverifyCurrentProfile,
+} = useProfile()
 
 const myReviews = ref([])
 const averageRating = ref(0)
@@ -31,12 +39,15 @@ const form = ref({
   bio: '',
   location: '',
   jobTitle: '',
-  languageText: '',
+  languagesText: '',
   about: '',
   avatarUrl: '',
 })
 
 const isUploadingAvatar = ref(false)
+const verifyProvider = ref('world_id')
+const proofId = ref('')
+
 const shortenedWallet = computed(() => {
   if (!walletAddress.value) return ''
   return `${walletAddress.value.slice(0, 6)}...${walletAddress.value.slice(-4)}`
@@ -98,6 +109,26 @@ async function handleSaveProfile() {
     about: form.value.about,
     avatarUrl: form.value.avatarUrl,
   })
+}
+
+async function handleVerifyProfile() {
+  if (!walletAddress.value) return
+
+  await verifyCurrentProfile({
+    walletAddress: walletAddress.value,
+    provider: verifyProvider.value,
+    proofId: proofId.value,
+  })
+
+  await loadProfile(walletAddress.value)
+}
+
+async function handleUnverifyProfile() {
+  if (!walletAddress.value) return
+
+  await unverifyCurrentProfile(walletAddress.value)
+
+  await loadProfile(walletAddress.value)
 }
 
 async function handleAvatarUpload(e) {
@@ -220,6 +251,73 @@ watch(
 
         <div class="profile-edit-card">
           <h2>Uredi profil</h2>
+
+          <div class="verification-box">
+            <div class="verification-box__top">
+              <div>
+                <h3>Verifikacija profila</h3>
+                <p class="verification-box__subtitle">
+                  Opcionalna verifikacija povećava povjerenje i prikazuje Verified badge na profilu.
+                </p>
+              </div>
+
+              <span v-if="profile?.isVerified" class="verified-badge">Verified</span>
+              <span v-else class="verification-pending-badge">Not verified</span>
+            </div>
+
+            <div v-if="profile?.isVerified" class="verification-success-box">
+              <div class="verification-info-row">
+                <span>Provider</span>
+                <strong>{{ profile?.verificationProvider || '—' }}</strong>
+              </div>
+
+              <div class="verification-info-row">
+                <span>Razina</span>
+                <strong>{{ profile?.verificationLevel || '—' }}</strong>
+              </div>
+
+              <div class="verification-info-row">
+                <span>Verificirano</span>
+                <strong>{{ profile?.verifiedAt || '—' }}</strong>
+              </div>
+
+              <button
+                class="verification-secondary-btn"
+                @click="handleUnverifyProfile"
+                :disabled="profileLoading"
+              >
+                Ukloni verifikaciju
+              </button>
+            </div>
+
+            <div v-else class="verification-form">
+              <div class="form-group">
+                <label>Provider</label>
+                <select v-model="verifyProvider" class="verification-select">
+                  <option value="world_id">World ID</option>
+                  <option value="privado_id">Privado ID</option>
+                  <option value="mock_kyc">Mock KYC</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label>Proof ID</label>
+                <input
+                  v-model="proofId"
+                  type="text"
+                  placeholder="Unesi verification reference / proof ID"
+                />
+              </div>
+
+              <button
+                class="verification-primary-btn"
+                @click="handleVerifyProfile"
+                :disabled="profileLoading || !proofId"
+              >
+                {{ profileLoading ? 'Verificiram...' : 'Verificiraj profil' }}
+              </button>
+            </div>
+          </div>
 
           <section v-if="profileSuccess" class="alert alert--success">
             {{ profileSuccess }}
@@ -595,6 +693,106 @@ watch(
   color: white;
   font-weight: 700;
   cursor: pointer;
+}
+
+.verification-box {
+  margin-bottom: 22px;
+  border: 1px solid #e5e7eb;
+  border-radius: 20px;
+  padding: 18px;
+  background: #fafafa;
+}
+
+.verification-box__top {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: start;
+  margin-bottom: 14px;
+}
+
+.verification-box__top h3 {
+  margin: 0 0 6px;
+  font-size: 1.05rem;
+}
+
+.verification-box__subtitle {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.verified-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 8px 12px;
+  background: #ecfdf3;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+  font-size: 0.82rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.verification-pending-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 8px 12px;
+  background: #f3f4f6;
+  color: #6b7280;
+  border: 1px solid #e5e7eb;
+  font-size: 0.82rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.verification-success-box {
+  display: grid;
+  gap: 10px;
+}
+
+.verification-info-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  background: white;
+  border: 1px solid #ededed;
+  border-radius: 14px;
+  padding: 12px 14px;
+}
+
+.verification-form {
+  display: grid;
+  gap: 14px;
+}
+
+.verification-select {
+  border: 1px solid #dddddd;
+  border-radius: 16px;
+  padding: 14px 16px;
+  font: inherit;
+  background: white;
+}
+
+.verification-primary-btn,
+.verification-secondary-btn {
+  border: 0;
+  border-radius: 16px;
+  padding: 13px 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.verification-primary-btn {
+  background: #111827;
+  color: white;
+}
+
+.verification-secondary-btn {
+  background: #f3f4f6;
+  color: #111827;
 }
 
 @media (max-width: 1100px) {

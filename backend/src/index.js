@@ -207,6 +207,8 @@ app.post("/api/profile/update", express.json(), (req, res) => {
       (p) => String(p.walletAddress || "").toLowerCase() === normalizedWallet,
     );
 
+    const existingProfile = existingIndex >= 0 ? profiles[existingIndex] : null;
+
     const profileData = {
       walletAddress: normalizedWallet,
       firstName: String(firstName || "").trim(),
@@ -218,6 +220,10 @@ app.post("/api/profile/update", express.json(), (req, res) => {
       languages: Array.isArray(languages) ? languages : [],
       about: String(about || "").trim(),
       avatarUrl: String(avatarUrl || "").trim(),
+      isVerified: existingProfile?.isVerified || false,
+      verificationProvider: existingProfile?.verificationProvider || "",
+      verificationLevel: existingProfile?.verificationLevel || "",
+      verifiedAt: existingProfile?.verifiedAt || null,
       updatedAt: new Date().toISOString(),
     };
 
@@ -248,6 +254,143 @@ app.post("/api/profile/update", express.json(), (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Greška kod spremanja profila.",
+    });
+  }
+});
+
+app.post("/api/profile/verify", (req, res) => {
+  try {
+    const { walletAddress, provider, proofId } = req.body || {};
+
+    if (!walletAddress) {
+      return res.status(400).json({
+        success: false,
+        message: "walletAddress je obavezan.",
+      });
+    }
+
+    if (!provider) {
+      return res.status(400).json({
+        success: false,
+        message: "provider je obavezan.",
+      });
+    }
+
+    // Za sada mock verifikacija:
+    // kasnije ovdje ide stvarna provjera prema World ID / Privado / drugom provideru
+    if (!proofId || !String(proofId).trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "proofId je obavezan za verifikaciju.",
+      });
+    }
+
+    const normalizedWallet = String(walletAddress).toLowerCase();
+    const profiles = readProfiles();
+
+    const existingIndex = profiles.findIndex(
+      (p) => String(p.walletAddress || "").toLowerCase() === normalizedWallet,
+    );
+
+    const verificationData = {
+      isVerified: true,
+      verificationProvider: String(provider).trim(),
+      verificationLevel: "proof_of_human",
+      verifiedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    if (existingIndex >= 0) {
+      profiles[existingIndex] = {
+        ...profiles[existingIndex],
+        ...verificationData,
+      };
+    } else {
+      profiles.push({
+        walletAddress: normalizedWallet,
+        firstName: "",
+        lastName: "",
+        displayName: "",
+        bio: "",
+        location: "",
+        jobTitle: "",
+        languages: [],
+        about: "",
+        avatarUrl: "",
+        ...verificationData,
+        createdAt: new Date().toISOString(),
+      });
+    }
+
+    writeProfiles(profiles);
+
+    const saved =
+      existingIndex >= 0
+        ? profiles[existingIndex]
+        : profiles[profiles.length - 1];
+
+    return res.json({
+      success: true,
+      message: "Profil je uspješno verificiran.",
+      profile: saved,
+    });
+  } catch (err) {
+    console.error("Greška kod verifikacije profila:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Greška kod verifikacije profila.",
+      error: err.message,
+    });
+  }
+});
+
+app.post("/api/profile/unverify", (req, res) => {
+  try {
+    const { walletAddress } = req.body || {};
+
+    if (!walletAddress) {
+      return res.status(400).json({
+        success: false,
+        message: "walletAddress je obavezan.",
+      });
+    }
+
+    const normalizedWallet = String(walletAddress).toLowerCase();
+    const profiles = readProfiles();
+
+    const existingIndex = profiles.findIndex(
+      (p) => String(p.walletAddress || "").toLowerCase() === normalizedWallet,
+    );
+
+    if (existingIndex < 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Profil nije pronađen.",
+      });
+    }
+
+    profiles[existingIndex] = {
+      ...profiles[existingIndex],
+      isVerified: false,
+      verificationProvider: "",
+      verificationLevel: "",
+      verifiedAt: null,
+      updatedAt: new Date().toISOString(),
+    };
+
+    writeProfiles(profiles);
+
+    return res.json({
+      success: true,
+      message: "Verifikacija je uklonjena.",
+      profile: profiles[existingIndex],
+    });
+  } catch (err) {
+    console.error("Greška kod uklanjanja verifikacije:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Greška kod uklanjanja verifikacije.",
+      error: err.message,
     });
   }
 });

@@ -50,7 +50,12 @@ function fullName(profile) {
           </div>
         </div>
 
-        <h3>{{ profile ? fullName(profile) : shortenAddress(hostWallet) }}</h3>
+        <div class="host-name-row">
+          <h3>{{ profile ? fullName(profile) : shortenAddress(hostWallet) }}</h3>
+
+          <span v-if="profile?.isVerified" class="verified-badge">Verified</span>
+        </div>
+
         <p class="host-wallet">{{ shortenAddress(hostWallet) }}</p>
 
         <div class="host-stats">
@@ -199,6 +204,31 @@ function fullName(profile) {
 
 .host-fallback {
   color: var(--muted);
+}
+
+.host-name-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.host-name-row h3 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.verified-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 7px 11px;
+  background: #ecfdf3;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+  font-size: 0.8rem;
+  font-weight: 800;
 }
 
 @media (max-width: 900px) {

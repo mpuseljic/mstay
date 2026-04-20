@@ -508,7 +508,10 @@ onMounted(async () => {
           <span :class="['badge', listing.isActive ? 'badge--success' : 'badge--muted']">
             {{ listing.isActive ? 'Aktivan' : 'Neaktivan' }}
           </span>
+
           <span class="host-badge">Host: {{ shortenAddress(listing.host) }}</span>
+
+          <span v-if="hostProfile?.isVerified" class="verified-badge">Verified host</span>
         </div>
       </section>
 
@@ -2163,6 +2166,16 @@ input {
   font-size: 0.92rem;
   font-weight: 600;
   line-height: 1.5;
+}
+
+.verified-badge {
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  font-weight: 800;
+  background: #ecfdf3;
+  color: #166534;
+  border: 1px solid #bbf7d0;
 }
 
 @media (max-width: 900px) {

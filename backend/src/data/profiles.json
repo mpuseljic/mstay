@@ -13,8 +13,12 @@
     ],
     "about": "Nešto više o meni",
     "avatarUrl": "",
-    "updatedAt": "2026-03-30T19:12:19.289Z",
-    "createdAt": "2026-03-30T19:12:19.289Z"
+    "updatedAt": "2026-04-20T08:53:31.943Z",
+    "createdAt": "2026-03-30T19:12:19.289Z",
+    "isVerified": true,
+    "verificationProvider": "world_id",
+    "verificationLevel": "proof_of_human",
+    "verifiedAt": "2026-04-20T08:53:31.943Z"
   },
   {
     "walletAddress": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",

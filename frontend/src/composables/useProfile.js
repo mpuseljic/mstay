@@ -1,5 +1,6 @@
 import { ref } from 'vue'
 import { fetchProfile, saveProfile } from '../services/profile'
+import { verifyProfile, unverifyProfile } from '../services/verification'
 
 const profile = ref(null)
 const profileLoading = ref(false)
@@ -47,6 +48,42 @@ export function useProfile() {
     }
   }
 
+  async function verifyCurrentProfile(payload) {
+    try {
+      profileLoading.value = true
+      profileError.value = ''
+      profileSuccess.value = ''
+
+      const result = await verifyProfile(payload)
+      profile.value = result
+      profileSuccess.value = 'Profil je uspješno verificiran.'
+      return result
+    } catch (err) {
+      profileError.value = err.message || 'Greška pri verifikaciji profila.'
+      throw err
+    } finally {
+      profileLoading.value = false
+    }
+  }
+
+  async function unverifyCurrentProfile(walletAddress) {
+    try {
+      profileLoading.value = true
+      profileError.value = ''
+      profileSuccess.value = ''
+
+      const result = await unverifyProfile({ walletAddress })
+      profile.value = result
+      profileSuccess.value = 'Verifikacija je uklonjena.'
+      return result
+    } catch (err) {
+      profileError.value = err.message || 'Greška pri uklanjanju verifikacije.'
+      throw err
+    } finally {
+      profileLoading.value = false
+    }
+  }
+
   return {
     profile,
     profileLoading,
@@ -54,5 +91,7 @@ export function useProfile() {
     profileSuccess,
     loadProfile,
     updateProfile,
+    verifyCurrentProfile,
+    unverifyCurrentProfile,
   }
 }

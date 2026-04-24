@@ -235,8 +235,8 @@ watch(
     <div class="details-modal__dialog">
       <div class="details-modal__top">
         <div>
-          <h2>Uredi detalje oglasa</h2>
-          <p>{{ listing?.title || 'Oglas' }}</p>
+          <h2>Edit listing details</h2>
+          <p>{{ listing?.title || 'Listing' }}</p>
         </div>
         <button class="details-modal__close" @click="$emit('close')">✕</button>
       </div>
@@ -252,41 +252,41 @@ watch(
       <div class="form-grid">
         <div class="form-group form-group--full">
           <label>Summary</label>
-          <input v-model="form.summary" type="text" placeholder="Kratki sažetak oglasa" />
+          <input v-model="form.summary" type="text" placeholder="Short listing summary" />
         </div>
 
         <div class="form-group form-group--full">
-          <label>Kratki opis</label>
+          <label>Short description</label>
           <textarea v-model="form.descriptionShort" rows="3"></textarea>
         </div>
 
         <div class="form-group form-group--full">
-          <label>Puni opis</label>
+          <label>Full description</label>
           <textarea v-model="form.descriptionLong" rows="6"></textarea>
         </div>
 
         <div class="form-group">
-          <label>Tip smještaja</label>
-          <input v-model="form.propertyType" type="text" placeholder="Cijeli apartman" />
+          <label>Property type</label>
+          <input v-model="form.propertyType" type="text" placeholder="Entire apartment" />
         </div>
 
         <div class="form-group">
-          <label>Broj gostiju</label>
+          <label>Guests</label>
           <input v-model="form.guestCount" type="number" min="1" />
         </div>
 
         <div class="form-group">
-          <label>Spavaće sobe</label>
+          <label>Bedrooms</label>
           <input v-model="form.bedrooms" type="number" min="0" />
         </div>
 
         <div class="form-group">
-          <label>Kreveti</label>
+          <label>Beds</label>
           <input v-model="form.beds" type="number" min="0" />
         </div>
 
         <div class="form-group">
-          <label>Kupaonice</label>
+          <label>Bathrooms</label>
           <input v-model="form.bathrooms" type="number" min="0" step="0.5" />
         </div>
 
@@ -295,7 +295,7 @@ watch(
           <textarea
             v-model="form.highlightsText"
             rows="5"
-            placeholder="Svaki red: Naslov::Opis"
+            placeholder="Each line: Title::Description"
           ></textarea>
         </div>
 
@@ -304,26 +304,26 @@ watch(
           <textarea
             v-model="form.amenitiesText"
             rows="6"
-            placeholder="Jedan sadržaj po retku"
+            placeholder="One amenity per line"
           ></textarea>
         </div>
 
         <div class="form-group form-group--full">
-          <label>Kućna pravila</label>
+          <label>House rules</label>
           <textarea
             v-model="form.houseRulesText"
             rows="5"
-            placeholder="Jedno pravilo po retku"
+            placeholder="One rule per line"
           ></textarea>
         </div>
 
         <div class="form-group">
-          <label>Naslov lokacije</label>
+          <label>Location title</label>
           <input v-model="form.locationTitle" type="text" />
         </div>
 
         <div class="form-group form-group--full">
-          <label>Opis lokacije</label>
+          <label>Location description</label>
           <textarea v-model="form.locationDescription" rows="4"></textarea>
         </div>
 
@@ -338,16 +338,16 @@ watch(
         </div>
 
         <div class="form-group form-group--full">
-          <label>Adresa ili mjesto</label>
+          <label>Address or location</label>
 
           <div class="geocode-row">
             <input
               v-model="geocodeQuery"
               type="text"
-              placeholder="Npr. Ilica 1, Zagreb ili Budimpešta, Mađarska"
+              placeholder="e.g. Ilica 1, Zagreb or Budapest, Hungary"
             />
             <button class="secondary-btn" @click="handleGeocode" :disabled="isGeocoding">
-              {{ isGeocoding ? 'Tražim...' : 'Pronađi lokaciju' }}
+              {{ isGeocoding ? 'Searching...' : 'Find location' }}
             </button>
           </div>
 
@@ -355,8 +355,9 @@ watch(
             {{ geocodeError }}
           </p>
         </div>
+
         <div class="form-group form-group--full">
-          <label>Odaberi lokaciju na mapi</label>
+          <label>Select location on map</label>
 
           <LocationPickerMap
             :latitude="form.latitude"
@@ -370,23 +371,23 @@ watch(
       <div class="sleeping-section">
         <div class="sleeping-section__top">
           <h3>Sleeping arrangements</h3>
-          <button class="add-btn" @click="addSleepingArrangement">Dodaj sobu</button>
+          <button class="add-btn" @click="addSleepingArrangement">Add room</button>
         </div>
 
         <div v-for="(room, index) in form.sleepingArrangements" :key="index" class="sleeping-row">
-          <input v-model="room.title" type="text" placeholder="Naziv sobe" />
-          <input v-model="room.subtitle" type="text" placeholder="Opis kreveta" />
+          <input v-model="room.title" type="text" placeholder="Room name" />
+          <input v-model="room.subtitle" type="text" placeholder="Bed description" />
           <input type="file" @change="(e) => handleRoomUpload(e, index)" />
           <img v-if="room.imageUrl" :src="room.imageUrl" class="room-preview" />
           <div v-if="uploadingRoomIndex === index">Uploading...</div>
-          <button class="remove-btn" @click="removeSleepingArrangement(index)">Ukloni</button>
+          <button class="remove-btn" @click="removeSleepingArrangement(index)">Remove</button>
         </div>
       </div>
 
       <div class="details-modal__actions">
-        <button class="secondary-btn" @click="$emit('close')">Odustani</button>
+        <button class="secondary-btn" @click="$emit('close')">Cancel</button>
         <button class="primary-btn" @click="handleSave" :disabled="listingDetailsLoading">
-          {{ listingDetailsLoading ? 'Spremanje...' : 'Spremi detalje' }}
+          {{ listingDetailsLoading ? 'Saving...' : 'Save details' }}
         </button>
       </div>
     </div>

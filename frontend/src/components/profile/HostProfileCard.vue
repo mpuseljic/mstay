@@ -34,7 +34,7 @@ function fullName(profile) {
 
 <template>
   <section class="host-profile-card">
-    <h2>Upoznajte svog domaćina</h2>
+    <h2>Meet your host</h2>
 
     <div class="host-profile-layout">
       <div class="host-profile-left">
@@ -61,12 +61,12 @@ function fullName(profile) {
         <div class="host-stats">
           <div class="host-stat">
             <strong>{{ totalReviews }}</strong>
-            <span>recenzije</span>
+            <span>reviews</span>
           </div>
 
           <div class="host-stat">
             <strong>{{ totalReviews ? `${averageRating.toFixed(1)} ★` : '—' }}</strong>
-            <span>ocjena</span>
+            <span>rating</span>
           </div>
         </div>
       </div>
@@ -77,10 +77,10 @@ function fullName(profile) {
         </p>
 
         <div class="host-meta">
-          <p v-if="profile?.location"><strong>Lokacija:</strong> {{ profile.location }}</p>
-          <p v-if="profile?.jobTitle"><strong>Zanimanje:</strong> {{ profile.jobTitle }}</p>
+          <p v-if="profile?.location"><strong>Location:</strong> {{ profile.location }}</p>
+          <p v-if="profile?.jobTitle"><strong>Occupation:</strong> {{ profile.jobTitle }}</p>
           <p v-if="profile?.languages?.length">
-            <strong>Jezici:</strong> {{ profile.languages.join(', ') }}
+            <strong>Languages:</strong> {{ profile.languages.join(', ') }}
           </p>
         </div>
 
@@ -88,7 +88,7 @@ function fullName(profile) {
           {{ profile.about }}
         </p>
 
-        <p v-if="!profile" class="host-fallback">Profil domaćina još nije uređen.</p>
+        <p v-if="!profile" class="host-fallback">This host hasn’t set up their profile yet.</p>
       </div>
     </div>
   </section>

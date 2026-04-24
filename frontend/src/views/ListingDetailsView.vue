@@ -502,16 +502,16 @@ onMounted(async () => {
         <div class="details-rating" v-if="listing.totalReviews > 0">
           <span class="details-rating__star">★</span>
           <strong>{{ listing.averageRating.toFixed(1) }}</strong>
-          <span>{{ listing.totalReviews }} recenzija</span>
+          <span>{{ listing.totalReviews }} reviews</span>
         </div>
 
         <div class="details-rating details-rating--muted" v-else>
-          <span>Još nema recenzija</span>
+          <span>No reviews yet</span>
         </div>
 
         <div class="head-badges">
           <span :class="['badge', listing.isActive ? 'badge--success' : 'badge--muted']">
-            {{ listing.isActive ? 'Aktivan' : 'Neaktivan' }}
+            {{ listing.isActive ? 'Active' : 'Inactive' }}
           </span>
 
           <span class="host-badge">Host: {{ shortenAddress(listing.host) }}</span>
@@ -530,7 +530,7 @@ onMounted(async () => {
             <span class="gallery__label">mStay Stay</span>
           </div>
 
-          <div v-if="mainImage" class="gallery__main-badge">Glavna fotografija</div>
+          <div v-if="mainImage" class="gallery__main-badge">Main photo</div>
         </div>
 
         <div class="gallery__side" v-if="galleryImages.length">
@@ -589,26 +589,26 @@ onMounted(async () => {
           <div class="content-card">
             <h2>About this stay</h2>
             <p>
-              Ovaj smještaj je objavljen na mStay platformi i može se rezervirati kroz escrow model
-              plaćanja putem blockchain transakcije.
+              This property is listed on the mStay platform and can be booked using a secure
+              blockchain-based escrow payment model.
             </p>
 
             <div class="info-grid">
               <div class="info-item">
-                <span>ID oglasa</span>
+                <span>Listing ID</span>
                 <strong>{{ listing.id }}</strong>
               </div>
               <div class="info-item">
-                <span>Lokacija</span>
+                <span>Location</span>
                 <strong>{{ listing.location }}</strong>
               </div>
               <div class="info-item">
-                <span>Cijena po noći</span>
+                <span>Price per night</span>
                 <strong>{{ listing.pricePerNight }} ETH</strong>
               </div>
               <div class="info-item">
                 <span>Status</span>
-                <strong>{{ listing.isActive ? 'Aktivan' : 'Neaktivan' }}</strong>
+                <strong>{{ listing.isActive ? 'Active' : 'Inactive' }}</strong>
               </div>
             </div>
           </div>
@@ -627,7 +627,7 @@ onMounted(async () => {
             <h2>Guest reviews</h2>
 
             <p v-if="reviews.length === 0" class="reviews-intro">
-              Ovaj domaćin još nema recenzija.
+              This host has not received any reviews yet.
             </p>
 
             <div v-else class="review-placeholder-grid">
@@ -636,16 +636,16 @@ onMounted(async () => {
           </div>
 
           <div class="content-card" v-if="listingContent">
-            <h2>{{ listingContent.propertyType || 'Smještaj' }} — {{ listing.location }}</h2>
+            <h2>{{ listingContent.propertyType || 'Property' }} — {{ listing.location }}</h2>
             <p class="listing-meta-line">
-              {{ listingContent.guestCount || 0 }} gostiju ·
-              {{ listingContent.bedrooms || 0 }} spavaće sobe ·
-              {{ listingContent.beds || 0 }} kreveta · {{ listingContent.bathrooms || 0 }} kupaonica
+              {{ listingContent.guestCount || 0 }} guests ·
+              {{ listingContent.bedrooms || 0 }} bedrooms · {{ listingContent.beds || 0 }} beds ·
+              {{ listingContent.bathrooms || 0 }} bathrooms
             </p>
           </div>
 
           <div class="content-card" v-if="listingContent?.highlights?.length">
-            <h2>Istaknute prednosti</h2>
+            <h2>Highlights</h2>
 
             <div class="highlights-list">
               <div
@@ -660,7 +660,7 @@ onMounted(async () => {
           </div>
 
           <div class="content-card" v-if="listingContent?.amenities?.length">
-            <h2>Što ovaj smještaj nudi</h2>
+            <h2>What this property offers</h2>
 
             <div class="amenities-grid">
               <div
@@ -673,12 +673,12 @@ onMounted(async () => {
             </div>
 
             <button class="section-link-btn" @click="isAmenitiesModalOpen = true">
-              Prikaži sve sadržaje ({{ listingContent.amenities.length }})
+              Show all amenities ({{ listingContent.amenities.length }})
             </button>
           </div>
 
           <div class="content-card" v-if="listingContent?.sleepingArrangements?.length">
-            <h2>Gdje ćete spavati</h2>
+            <h2>Where you'll sleep</h2>
 
             <div class="sleeping-grid">
               <div
@@ -710,8 +710,9 @@ onMounted(async () => {
               :description="listingContent?.locationDescription || listing.location"
             />
           </div>
+
           <div class="content-card" v-if="listingContent?.houseRules?.length">
-            <h2>Kućna pravila</h2>
+            <h2>House rules</h2>
 
             <ul class="rules-list">
               <li v-for="(rule, index) in listingContent.houseRules" :key="index">
@@ -719,6 +720,7 @@ onMounted(async () => {
               </li>
             </ul>
           </div>
+
           <HostProfileCard
             :profile="hostProfile"
             :average-rating="listing.averageRating || 0"
@@ -731,38 +733,38 @@ onMounted(async () => {
           <div class="booking-card">
             <div class="price-top">
               <strong>{{ listing.pricePerNight }} ETH</strong>
-              <span>/ noć</span>
+              <span>/ night</span>
             </div>
 
             <div class="booking-date-box" @click="isCalendarOpen = true">
               <div class="booking-date-cell">
-                <span class="booking-label">DOLAZAK</span>
+                <span class="booking-label">CHECK-IN</span>
                 <strong>{{
                   reservationForm.checkIn
                     ? formatDateForDisplay(reservationForm.checkIn)
-                    : 'Dodaj datum'
+                    : 'Add date'
                 }}</strong>
               </div>
 
               <div class="booking-date-cell">
-                <span class="booking-label">ODLAZAK</span>
+                <span class="booking-label">CHECK-OUT</span>
                 <strong>{{
                   reservationForm.checkOut
                     ? formatDateForDisplay(reservationForm.checkOut)
-                    : 'Dodaj datum'
+                    : 'Add date'
                 }}</strong>
               </div>
             </div>
 
-            <div class="booking-info-strip">Besplatno otkazivanje do 48h prije dolaska</div>
+            <div class="booking-info-strip">Free cancellation up to 48 hours before check-in</div>
 
             <div v-if="reservationNights > 0" class="preview">
               <div class="preview-row">
-                <span>Noćenja</span>
+                <span>Nights</span>
                 <strong>{{ reservationNights }}</strong>
               </div>
               <div class="preview-row">
-                <span>Ukupna cijena</span>
+                <span>Total price</span>
                 <strong>{{ reservationPricePreview }} ETH</strong>
               </div>
             </div>
@@ -773,25 +775,25 @@ onMounted(async () => {
               :class="{ 'loyalty-box--locked': !canUseLoyaltyDiscount }"
             >
               <div class="loyalty-box__top">
-                <strong>Loyalty popust</strong>
-                <span v-if="walletAddress">MST balans: {{ Number(tokenBalance).toFixed(2) }}</span>
-                <span v-else>MetaMask nije spojen</span>
+                <strong>Loyalty discount</strong>
+                <span v-if="walletAddress">MST balance: {{ Number(tokenBalance).toFixed(2) }}</span>
+                <span v-else>MetaMask is not connected</span>
               </div>
 
               <template v-if="canUseLoyaltyDiscount">
                 <p class="loyalty-box__text">
-                  Iskoristi {{ discountTokenCost }} MST za {{ discountPercent }}% popusta na ovu
-                  rezervaciju.
+                  Use {{ discountTokenCost }} MST to unlock a {{ discountPercent }}% discount on
+                  this booking.
                 </p>
 
                 <div class="loyalty-price-row">
-                  <span>Cijena s popustom</span>
+                  <span>Discounted price</span>
                   <strong>{{ discountedReservationPrice }} ETH</strong>
                 </div>
 
                 <label class="loyalty-check">
                   <input v-model="useDiscountBooking" type="checkbox" />
-                  <span>Želim koristiti loyalty popust</span>
+                  <span>Use loyalty discount</span>
                 </label>
 
                 <button
@@ -807,21 +809,21 @@ onMounted(async () => {
 
               <template v-else-if="walletAddress">
                 <p class="loyalty-box__text">
-                  Loyalty popust se otključava kada sakupiš najmanje
+                  The loyalty discount unlocks once you collect at least
                   <strong>{{ discountTokenCost }} MST</strong>.
                 </p>
 
                 <div class="loyalty-lock-info">
                   <div class="loyalty-lock-row">
-                    <span>Trenutni balans</span>
+                    <span>Current balance</span>
                     <strong>{{ Number(tokenBalance).toFixed(2) }} MST</strong>
                   </div>
                   <div class="loyalty-lock-row">
-                    <span>Potrebno za popust</span>
+                    <span>Required for discount</span>
                     <strong>{{ discountTokenCost }} MST</strong>
                   </div>
                   <div class="loyalty-lock-row">
-                    <span>Nedostaje ti još</span>
+                    <span>You still need</span>
                     <strong
                       >{{
                         Math.max(0, discountTokenCost - Number(tokenBalance || 0)).toFixed(2)
@@ -832,18 +834,17 @@ onMounted(async () => {
                 </div>
 
                 <div class="loyalty-locked-note">
-                  Nastavi rezervirati smještaj i skupljati mStayCoin tokene kako bi otključala
-                  popuste.
+                  Keep booking stays and earning mStayCoin tokens to unlock discounts.
                 </div>
               </template>
 
               <template v-else>
                 <p class="loyalty-box__text">
-                  Spoji MetaMask kako bi vidjela svoj MST balans i loyalty pogodnosti.
+                  Connect MetaMask to view your MST balance and loyalty benefits.
                 </p>
 
                 <div class="loyalty-locked-note">
-                  Loyalty popust je dostupan korisnicima koji imaju najmanje
+                  The loyalty discount is available to users who hold at least
                   {{ discountTokenCost }} MST.
                 </div>
               </template>
@@ -871,16 +872,18 @@ onMounted(async () => {
             >
               {{
                 isOwnListing
-                  ? 'Vlastiti oglas'
+                  ? 'Your own listing'
                   : isBooking
-                    ? 'Slanje transakcije...'
+                    ? 'Submitting transaction...'
                     : useDiscountBooking
-                      ? 'Rezerviraj s popustom'
-                      : 'Rezerviraj'
+                      ? 'Book with discount'
+                      : 'Reserve'
               }}
             </button>
 
-            <p class="booking-note">Sredstva se drže u escrowu do trenutka isplate domaćinu.</p>
+            <p class="booking-note">
+              Funds are held in escrow until they are released to the host.
+            </p>
           </div>
 
           <div v-if="isCalendarOpen" class="calendar-modal" @click.self="isCalendarOpen = false">
@@ -888,13 +891,13 @@ onMounted(async () => {
               <div class="calendar-modal__top">
                 <div>
                   <h3>
-                    {{ reservationNights > 0 ? `${reservationNights} noćenja` : 'Odaberi datume' }}
+                    {{ reservationNights > 0 ? `${reservationNights} nights` : 'Select dates' }}
                   </h3>
                   <p>
                     {{
                       reservationForm.checkIn && reservationForm.checkOut
                         ? `${formatDateForDisplay(reservationForm.checkIn)} - ${formatDateForDisplay(reservationForm.checkOut)}`
-                        : 'Odaberi dolazak i odlazak'
+                        : 'Choose your check-in and check-out dates'
                     }}
                   </p>
                 </div>
@@ -904,20 +907,20 @@ onMounted(async () => {
 
               <div class="calendar-modal__inputs">
                 <div class="calendar-input-box">
-                  <span>DOLAZAK</span>
+                  <span>CHECK-IN</span>
                   <strong>{{
                     reservationForm.checkIn
                       ? formatDateForDisplay(reservationForm.checkIn)
-                      : 'Dodaj datum'
+                      : 'Add date'
                   }}</strong>
                 </div>
 
                 <div class="calendar-input-box">
-                  <span>ODLAZAK</span>
+                  <span>CHECK-OUT</span>
                   <strong>{{
                     reservationForm.checkOut
                       ? formatDateForDisplay(reservationForm.checkOut)
-                      : 'Dodaj datum'
+                      : 'Add date'
                   }}</strong>
                 </div>
               </div>
@@ -934,9 +937,9 @@ onMounted(async () => {
               />
 
               <div class="calendar-modal__footer">
-                <button class="calendar-clear" @click="clearSelectedDates">Izbriši datume</button>
+                <button class="calendar-clear" @click="clearSelectedDates">Clear dates</button>
 
-                <button class="calendar-done" @click="isCalendarOpen = false">Zatvori</button>
+                <button class="calendar-done" @click="isCalendarOpen = false">Close</button>
               </div>
             </div>
           </div>
@@ -947,8 +950,8 @@ onMounted(async () => {
         <div class="checkout-modal__dialog">
           <div class="checkout-modal__top">
             <div>
-              <h3>Potvrda rezervacije</h3>
-              <p>Pregledaj detalje prije slanja blockchain transakcije.</p>
+              <h3>Confirm your reservation</h3>
+              <p>Review the booking details before submitting your blockchain transaction.</p>
             </div>
 
             <button class="checkout-close" @click="isCheckoutOpen = false">✕</button>
@@ -971,28 +974,28 @@ onMounted(async () => {
 
               <div class="checkout-summary__grid">
                 <div class="checkout-item">
-                  <span>Dolazak</span>
+                  <span>Check-in</span>
                   <strong>{{ formatDateForDisplay(checkoutSummary.checkIn) }}</strong>
                 </div>
 
                 <div class="checkout-item">
-                  <span>Odlazak</span>
+                  <span>Check-out</span>
                   <strong>{{ formatDateForDisplay(checkoutSummary.checkOut) }}</strong>
                 </div>
 
                 <div class="checkout-item">
-                  <span>Noćenja</span>
+                  <span>Nights</span>
                   <strong>{{ checkoutSummary.nights }}</strong>
                 </div>
 
                 <div class="checkout-item">
-                  <span>Cijena / noć</span>
+                  <span>Price / night</span>
                   <strong>{{ checkoutSummary.pricePerNight }} ETH</strong>
                 </div>
               </div>
 
               <div class="checkout-total">
-                <span>Ukupno za platiti</span>
+                <span>Total to pay</span>
                 <strong
                   >{{
                     useDiscountBooking ? discountedReservationPrice : checkoutSummary.total
@@ -1002,8 +1005,8 @@ onMounted(async () => {
               </div>
 
               <div class="checkout-note">
-                Plaćanje ide kroz escrow model. Sredstva se zaključavaju do trenutka isplate
-                domaćinu.
+                Payment is processed through an escrow model. Funds remain locked until they are
+                released to the host.
               </div>
 
               <div v-if="bookingError" class="booking-message booking-message--error">
@@ -1011,7 +1014,7 @@ onMounted(async () => {
               </div>
 
               <div class="checkout-actions">
-                <button class="checkout-secondary" @click="isCheckoutOpen = false">Odustani</button>
+                <button class="checkout-secondary" @click="isCheckoutOpen = false">Cancel</button>
 
                 <button
                   class="checkout-primary"
@@ -1022,10 +1025,10 @@ onMounted(async () => {
                 >
                   {{
                     isBooking
-                      ? 'Slanje transakcije...'
+                      ? 'Submitting transaction...'
                       : useDiscountBooking
-                        ? 'Potvrdi rezervaciju s popustom'
-                        : 'Potvrdi rezervaciju'
+                        ? 'Confirm discounted booking'
+                        : 'Confirm reservation'
                   }}
                 </button>
               </div>
@@ -1041,12 +1044,12 @@ onMounted(async () => {
       >
         <div class="section-modal__dialog">
           <button class="section-modal__close" @click="isDescriptionModalOpen = false">✕</button>
-          <h2>Više o smještaju</h2>
+          <h2>More about this stay</h2>
           <p class="section-modal__text">
             {{
               listingContent?.descriptionLong ||
               listingContent?.descriptionShort ||
-              'Opis nije dostupan.'
+              'No description available.'
             }}
           </p>
         </div>
@@ -1059,7 +1062,7 @@ onMounted(async () => {
       >
         <div class="section-modal__dialog">
           <button class="section-modal__close" @click="isAmenitiesModalOpen = false">✕</button>
-          <h2>Svi sadržaji</h2>
+          <h2>All amenities</h2>
 
           <div class="amenities-grid amenities-grid--modal">
             <div
@@ -1076,8 +1079,8 @@ onMounted(async () => {
 
     <main class="page" v-else>
       <section class="empty-page">
-        <h1>Oglas nije pronađen</h1>
-        <p>Provjeri ID oglasa ili se vrati na popis svih oglasa.</p>
+        <h1>Listing not found</h1>
+        <p>Please check the listing ID or return to the full listings page.</p>
       </section>
       <AppFooter />
     </main>

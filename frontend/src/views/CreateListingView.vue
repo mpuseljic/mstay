@@ -84,7 +84,7 @@ async function handleSubmit() {
         <div class="head">
           <div>
             <h1>Become a host</h1>
-            <p>Objavi novi smještaj i učini ga dostupnim za rezervacije.</p>
+            <p>Create a new listing and make it available for bookings.</p>
           </div>
         </div>
 
@@ -93,37 +93,37 @@ async function handleSubmit() {
 
         <div class="form-grid">
           <div class="form-group">
-            <label>Naslov</label>
-            <input v-model="form.title" type="text" placeholder="Npr. Apartman Arena" />
+            <label>Title</label>
+            <input v-model="form.title" type="text" placeholder="e.g. Arena Apartment" />
           </div>
 
           <div class="form-group">
-            <label>Lokacija</label>
-            <input v-model="form.location" type="text" placeholder="Npr. Pula" />
+            <label>Location</label>
+            <input v-model="form.location" type="text" placeholder="e.g. Pula, Croatia" />
           </div>
 
           <div class="form-group form-group--full">
-            <label>Fotografija oglasa</label>
+            <label>Listing photos</label>
             <input type="file" accept="image/*" multiple @change="handleFileChange" />
           </div>
 
           <div v-if="previewUrls.length" class="form-group form-group--full">
-            <label>Preview fotografija</label>
+            <label>Photo preview</label>
             <div class="multi-preview-grid">
               <div v-for="(url, index) in previewUrls" :key="index" class="image-preview-wrap">
-                <img :src="url" alt="Preview slike" class="image-preview" />
+                <img :src="url" alt="Listing preview" class="image-preview" />
               </div>
             </div>
           </div>
 
           <div class="form-group form-group--full">
-            <label>Cijena po noćenju (ETH)</label>
+            <label>Price per night (ETH)</label>
             <input
               v-model="form.pricePerNight"
               type="number"
               min="0"
               step="0.01"
-              placeholder="Npr. 0.12"
+              placeholder="e.g. 0.12"
             />
           </div>
         </div>
@@ -131,10 +131,10 @@ async function handleSubmit() {
         <button class="submit-btn" @click="handleSubmit" :disabled="isSubmitting || isUploading">
           {{
             isUploading
-              ? 'Uploadam sliku...'
+              ? 'Uploading images...'
               : isSubmitting
-                ? 'Objavljujem oglas...'
-                : 'Objavi oglas'
+                ? 'Publishing listing...'
+                : 'Publish listing'
           }}
         </button>
       </section>

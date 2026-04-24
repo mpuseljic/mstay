@@ -91,14 +91,17 @@ watch(
 
 <template>
   <section class="map-card">
-    <h2>Gdje ćete biti</h2>
+    <h2>Where you’ll be</h2>
 
     <div v-if="hasValidCoordinates()" ref="mapEl" class="map-box"></div>
 
     <div v-else class="map-fallback">
       <div class="map-fallback__icon">📍</div>
-      <h3>Lokacija još nije postavljena</h3>
-      <p>Domaćin još nije unio koordinate smještaja.</p>
+      <h3>Exact location provided after booking</h3>
+      <p>
+        For privacy and security, the precise address will be shared once your reservation is
+        confirmed.
+      </p>
     </div>
   </section>
 </template>

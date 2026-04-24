@@ -34,13 +34,7 @@ function shortenAddress(address) {
 <template>
   <article class="card">
     <div class="card__image" @click="openDetails">
-      <img
-        v-if="listing.imageUrl"
-        :src="listing.imageUrl"
-        ,
-        :alt="listing.title"
-        class="card__img"
-      />
+      <img v-if="listing.imageUrl" :src="listing.imageUrl" :alt="listing.title" class="card__img" />
       <div v-else class="card__placeholder">
         <span class="card__image-badge">mStay</span>
       </div>
@@ -54,18 +48,18 @@ function shortenAddress(address) {
         </div>
 
         <span :class="['badge', listing.isActive ? 'badge--success' : 'badge--muted']">
-          {{ listing.isActive ? 'Aktivan' : 'Neaktivan' }}
+          {{ listing.isActive ? 'Active' : 'Inactive' }}
         </span>
       </div>
 
       <div class="rating-row" v-if="listing.totalReviews > 0">
         <span class="rating-star">★</span>
         <span class="rating-value">{{ listing.averageRating.toFixed(1) }}</span>
-        <span class="rating-count">({{ listing.totalReviews }} recenzija)</span>
+        <span class="rating-count">({{ listing.totalReviews }} reviews)</span>
       </div>
 
       <div class="rating-row rating-row--muted" v-else>
-        <span class="rating-count">Još nema recenzija</span>
+        <span class="rating-count">No reviews yet</span>
       </div>
 
       <div class="meta">
@@ -74,19 +68,19 @@ function shortenAddress(address) {
           <strong>{{ listing.id }}</strong>
         </div>
         <div class="meta__item">
-          <span>Po noći</span>
+          <span>Per night</span>
           <strong>{{ listing.pricePerNight }} ETH</strong>
         </div>
       </div>
 
-      <p class="host">Domaćin: {{ shortenAddress(listing.host) }}</p>
+      <p class="host">Host: {{ shortenAddress(listing.host) }}</p>
 
       <button
         class="reserve-btn"
         @click="$emit('reserve', listing)"
         :disabled="!listing.isActive || isOwnListing()"
       >
-        {{ isOwnListing() ? 'Vlastiti oglas' : 'Rezerviraj' }}
+        {{ isOwnListing() ? 'Your listing' : 'Reserve' }}
       </button>
     </div>
   </article>

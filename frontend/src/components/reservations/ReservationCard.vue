@@ -66,19 +66,19 @@ function shortenAddress(address) {
 <template>
   <article class="card">
     <div class="top">
-      <h3>Rezervacija #{{ reservation.id }}</h3>
+      <h3>Reservation #{{ reservation.id }}</h3>
       <span :class="getStatusClass(reservation.status)">
         {{ getStatusLabel(reservation.status) }}
       </span>
     </div>
 
     <div class="details">
-      <p><strong>ID oglasa:</strong> {{ reservation.listingId }}</p>
-      <p v-if="mode === 'host'"><strong>Gost:</strong> {{ shortenAddress(reservation.guest) }}</p>
+      <p><strong>Listing ID:</strong> {{ reservation.listingId }}</p>
+      <p v-if="mode === 'host'"><strong>Guest:</strong> {{ shortenAddress(reservation.guest) }}</p>
       <p><strong>Check-in:</strong> {{ reservation.checkInDate }}</p>
       <p><strong>Check-out:</strong> {{ reservation.checkOutDate }}</p>
-      <p><strong>Noćenja:</strong> {{ reservation.nights }}</p>
-      <p><strong>Ukupna cijena:</strong> {{ reservation.totalPrice }} ETH</p>
+      <p><strong>Nights:</strong> {{ reservation.nights }}</p>
+      <p><strong>Total price:</strong> {{ reservation.totalPrice }} ETH</p>
     </div>
 
     <div class="actions">
@@ -88,7 +88,7 @@ function shortenAddress(address) {
           class="btn btn--danger"
           @click="$emit('guest-cancel', reservation.id)"
         >
-          Otkaži kao gost
+          Cancel reservation
         </button>
 
         <button
@@ -96,7 +96,7 @@ function shortenAddress(address) {
           class="btn btn--secondary"
           @click="$emit('guest-review', reservation.id)"
         >
-          Ocijeni domaćina
+          Leave a review for the host
         </button>
       </template>
 
@@ -106,7 +106,7 @@ function shortenAddress(address) {
           class="btn btn--danger"
           @click="$emit('host-cancel', reservation.id)"
         >
-          Otkaži kao domaćin
+          Cancel reservation
         </button>
 
         <button
@@ -114,7 +114,7 @@ function shortenAddress(address) {
           class="btn btn--success"
           @click="$emit('host-payout', reservation.id)"
         >
-          Isplati domaćinu
+          Release payout
         </button>
 
         <button
@@ -122,10 +122,12 @@ function shortenAddress(address) {
           class="btn btn--secondary"
           @click="$emit('host-review', reservation.id)"
         >
-          Ocijeni gosta
+          Leave a review for the guest
         </button>
 
-        <span v-if="reviewedLabel" class="review-badge"> {{ reviewedLabel }}</span>
+        <span v-if="reviewedLabel" class="review-badge">
+          {{ reviewedLabel }}
+        </span>
       </template>
     </div>
   </article>

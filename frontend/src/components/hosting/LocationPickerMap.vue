@@ -116,7 +116,7 @@ onBeforeUnmount(() => {
 <template>
   <div class="picker-map-wrap">
     <div ref="mapEl" class="picker-map"></div>
-    <p class="picker-map__note">Klikni na mapu kako bi postavila točnu lokaciju smještaja.</p>
+    <p class="picker-map__note">Click on the map to set the exact location of the property.</p>
   </div>
 </template>
 

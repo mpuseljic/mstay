@@ -176,8 +176,8 @@ watch(
           <span class="eyebrow">User reputation</span>
           <h1>My Profile</h1>
           <p>
-            Ovdje možeš vidjeti svoju reputaciju na mStay platformi, prosječnu ocjenu i sve
-            recenzije koje su ti ostavili drugi korisnici.
+            Here you can view your reputation on the mStay platform, your average rating, and all
+            reviews left by other users.
           </p>
         </div>
 
@@ -185,19 +185,19 @@ watch(
           <div class="stat-card">
             <span class="stat-label">Wallet</span>
             <strong class="stat-value stat-value--wallet">
-              {{ walletAddress ? shortenedWallet : 'Nije spojen' }}
+              {{ walletAddress ? shortenedWallet : 'Not connected' }}
             </strong>
           </div>
 
           <div class="stat-card">
-            <span class="stat-label">Prosječna ocjena</span>
+            <span class="stat-label">Average rating</span>
             <strong class="stat-value">
               {{ ratingLabel }}
             </strong>
           </div>
 
           <div class="stat-card">
-            <span class="stat-label">Ukupno recenzija</span>
+            <span class="stat-label">Total reviews</span>
             <strong class="stat-value">
               {{ totalReviews }}
             </strong>
@@ -229,35 +229,36 @@ watch(
 
           <h3>{{ fullName }}</h3>
           <p class="profile-subtitle">
-            {{ form.location || 'Lokacija nije unesena' }}
+            {{ form.location || 'Location not specified' }}
           </p>
 
           <div class="profile-mini-stats">
             <div class="profile-mini-stat">
-              <span>Ocjena</span>
+              <span>Rating</span>
               <strong>{{ totalReviews ? `${averageRating.toFixed(1)} ★` : '—' }}</strong>
             </div>
 
             <div class="profile-mini-stat">
-              <span>Recenzije</span>
+              <span>Reviews</span>
               <strong>{{ totalReviews }}</strong>
             </div>
           </div>
 
           <p class="profile-bio-preview">
-            {{ form.bio || 'Dodaj kratki bio kako bi drugi korisnici saznali više o tebi.' }}
+            {{ form.bio || 'Add a short bio so others can learn more about you.' }}
           </p>
         </div>
 
         <div class="profile-edit-card">
-          <h2>Uredi profil</h2>
+          <h2>Edit profile</h2>
 
           <div class="verification-box">
             <div class="verification-box__top">
               <div>
-                <h3>Verifikacija profila</h3>
+                <h3>Profile verification</h3>
                 <p class="verification-box__subtitle">
-                  Opcionalna verifikacija povećava povjerenje i prikazuje Verified badge na profilu.
+                  Optional verification increases trust and displays a Verified badge on your
+                  profile.
                 </p>
               </div>
 
@@ -272,12 +273,12 @@ watch(
               </div>
 
               <div class="verification-info-row">
-                <span>Razina</span>
+                <span>Level</span>
                 <strong>{{ profile?.verificationLevel || '—' }}</strong>
               </div>
 
               <div class="verification-info-row">
-                <span>Verificirano</span>
+                <span>Verified at</span>
                 <strong>{{ profile?.verifiedAt || '—' }}</strong>
               </div>
 
@@ -286,7 +287,7 @@ watch(
                 @click="handleUnverifyProfile"
                 :disabled="profileLoading"
               >
-                Ukloni verifikaciju
+                Remove verification
               </button>
             </div>
 
@@ -305,7 +306,7 @@ watch(
                 <input
                   v-model="proofId"
                   type="text"
-                  placeholder="Unesi verification reference / proof ID"
+                  placeholder="Enter verification reference / proof ID"
                 />
               </div>
 
@@ -314,7 +315,7 @@ watch(
                 @click="handleVerifyProfile"
                 :disabled="profileLoading || !proofId"
               >
-                {{ profileLoading ? 'Verificiram...' : 'Verificiraj profil' }}
+                {{ profileLoading ? 'Verifying...' : 'Verify profile' }}
               </button>
             </div>
           </div>
@@ -329,61 +330,61 @@ watch(
 
           <div class="profile-form-grid">
             <div class="form-group">
-              <label>Ime</label>
-              <input v-model="form.firstName" type="text" placeholder="Npr. Mirna" />
+              <label>First name</label>
+              <input v-model="form.firstName" type="text" placeholder="e.g. Mirna" />
             </div>
 
             <div class="form-group">
-              <label>Prezime</label>
-              <input v-model="form.lastName" type="text" placeholder="Npr. Pušeljić" />
+              <label>Last name</label>
+              <input v-model="form.lastName" type="text" placeholder="e.g. Pušeljić" />
             </div>
 
             <div class="form-group">
-              <label>Prikazno ime</label>
-              <input v-model="form.displayName" type="text" placeholder="Npr. Mirna" />
+              <label>Display name</label>
+              <input v-model="form.displayName" type="text" placeholder="e.g. Mirna" />
             </div>
 
             <div class="form-group">
-              <label>Lokacija</label>
-              <input v-model="form.location" type="text" placeholder="Npr. Zagreb, Hrvatska" />
+              <label>Location</label>
+              <input v-model="form.location" type="text" placeholder="e.g. Zagreb, Croatia" />
             </div>
 
             <div class="form-group form-group--full">
-              <label>Avatar URL</label>
+              <label>Avatar</label>
               <input type="file" @change="handleAvatarUpload" />
             </div>
 
             <div class="form-group">
-              <label>Zanimanje</label>
-              <input v-model="form.jobTitle" type="text" placeholder="Npr. Developer" />
+              <label>Occupation</label>
+              <input v-model="form.jobTitle" type="text" placeholder="e.g. Developer" />
             </div>
 
             <div class="form-group">
-              <label>Jezici</label>
-              <input v-model="form.languagesText" type="text" placeholder="Hrvatski, Engleski" />
+              <label>Languages</label>
+              <input v-model="form.languagesText" type="text" placeholder="Croatian, English" />
             </div>
 
             <div class="form-group form-group--full">
-              <label>Kratki bio</label>
+              <label>Short bio</label>
               <textarea
                 v-model="form.bio"
                 rows="3"
-                placeholder="Napiši kratko predstavljanje..."
+                placeholder="Write a short introduction..."
               ></textarea>
             </div>
 
             <div class="form-group form-group--full">
-              <label>O meni</label>
+              <label>About me</label>
               <textarea
                 v-model="form.about"
                 rows="5"
-                placeholder="Napiši nešto više o sebi..."
+                placeholder="Tell others more about yourself..."
               ></textarea>
             </div>
           </div>
 
           <button class="save-profile-btn" @click="handleSaveProfile" :disabled="profileLoading">
-            {{ profileLoading ? 'Spremanje...' : 'Spremi profil' }}
+            {{ profileLoading ? 'Saving...' : 'Save profile' }}
           </button>
         </div>
       </section>
@@ -391,29 +392,26 @@ watch(
       <section class="section-head">
         <div>
           <h2>Reviews about you</h2>
-          <p>Recenzije koje su ti ostavili domaćini ili gosti na platformi.</p>
+          <p>Reviews left by hosts or guests on the platform.</p>
         </div>
       </section>
 
       <section v-if="isLoadingProfile" class="empty-state">
         <div class="empty-state__icon">⏳</div>
-        <h3>Učitavanje profila...</h3>
-        <p>Pričekaj trenutak dok dohvatimo tvoje podatke i recenzije.</p>
+        <h3>Loading profile...</h3>
+        <p>Please wait while we fetch your data and reviews.</p>
       </section>
 
       <section v-else-if="!walletAddress" class="empty-state">
         <div class="empty-state__icon">👤</div>
-        <h3>Spoji wallet za pregled profila</h3>
-        <p>Za prikaz reputacije i recenzija potrebno je spojiti MetaMask wallet.</p>
+        <h3>Connect your wallet to view your profile</h3>
+        <p>To see your reputation and reviews, please connect your MetaMask wallet.</p>
       </section>
 
       <section v-else-if="myReviews.length === 0" class="empty-state">
         <div class="empty-state__icon">⭐</div>
-        <h3>Još nemaš recenzija</h3>
-        <p>
-          Kada drugi korisnici ostave recenziju o tebi, ovdje će se prikazati sve povratne
-          informacije.
-        </p>
+        <h3>No reviews yet</h3>
+        <p>When other users leave reviews about you, all feedback will be displayed here.</p>
       </section>
 
       <section v-else class="reviews-grid">

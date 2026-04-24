@@ -230,24 +230,24 @@ watch(
           <span class="eyebrow">Host dashboard</span>
           <h1>My Hosting</h1>
           <p>
-            Ovdje upravljaš rezervacijama za svoje oglase, otkazivanjima, isplatama escrow sredstava
-            i ocjenjivanjem gostiju nakon boravka.
+            Manage reservations for your listings, cancellations, escrow payouts, and review guests
+            after their stay.
           </p>
         </div>
 
         <div class="hero__stats" v-if="hostAnalytics">
           <div class="stat-card">
-            <span class="stat-label">Moji oglasi</span>
+            <span class="stat-label">My listings</span>
             <strong class="stat-value">{{ hostAnalytics.totalListings }}</strong>
           </div>
 
           <div class="stat-card">
-            <span class="stat-label">Ukupno rezervacija</span>
+            <span class="stat-label">Total reservations</span>
             <strong class="stat-value">{{ hostAnalytics.totalReservations }}</strong>
           </div>
 
           <div class="stat-card">
-            <span class="stat-label">Ukupno zarađeno</span>
+            <span class="stat-label">Total earned</span>
             <strong class="stat-value">{{ hostAnalytics.totalEarnedEth.toFixed(4) }} ETH</strong>
           </div>
 
@@ -257,12 +257,12 @@ watch(
           </div>
 
           <div class="stat-card">
-            <span class="stat-label">Aktivne rezervacije</span>
+            <span class="stat-label">Active reservations</span>
             <strong class="stat-value">{{ hostAnalytics.activeReservations }}</strong>
           </div>
 
           <div class="stat-card">
-            <span class="stat-label">Ocjena</span>
+            <span class="stat-label">Rating</span>
             <strong class="stat-value">
               {{
                 hostAnalytics.totalReviewsReceived
@@ -285,17 +285,19 @@ watch(
       <section class="section-head">
         <div>
           <h2>My listings</h2>
-          <p>Pregled svih oglasa koje si objavila kao domaćin.</p>
+          <p>Overview of all listings you have published as a host.</p>
         </div>
 
-        <RouterLink to="/create-listing" class="explore-btn"> Dodaj novi oglas </RouterLink>
+        <RouterLink to="/create-listing" class="explore-btn"> Add new listing </RouterLink>
       </section>
 
       <section v-if="hostingListingStats.length === 0" class="empty-state empty-state--compact">
         <div class="empty-state__icon">🏡</div>
-        <h3>Još nemaš objavljenih oglasa</h3>
-        <p>Objavi prvi smještaj kako bi mogao primati rezervacije i recenzije.</p>
-        <RouterLink to="/create-listing" class="primary-link-btn"> Objavi prvi oglas </RouterLink>
+        <h3>You don’t have any listings yet</h3>
+        <p>Create your first property to start receiving bookings and reviews.</p>
+        <RouterLink to="/create-listing" class="primary-link-btn">
+          Create your first listing
+        </RouterLink>
       </section>
 
       <section v-else class="host-listing-grid">
@@ -320,38 +322,38 @@ watch(
               </div>
 
               <span :class="['badge', listing.isActive ? 'badge--success' : 'badge--muted']">
-                {{ listing.isActive ? 'Aktivan' : 'Neaktivan' }}
+                {{ listing.isActive ? 'Active' : 'Inactive' }}
               </span>
             </div>
 
             <div class="host-rating-row" v-if="listing.totalReviews > 0">
               <span class="host-rating-row__star">★</span>
               <strong>{{ listing.averageRating.toFixed(1) }}</strong>
-              <span>{{ listing.totalReviews }} recenzija</span>
+              <span>{{ listing.totalReviews }} reviews</span>
             </div>
 
             <div class="host-rating-row host-rating-row--muted" v-else>
-              <span>Još nema recenzija</span>
+              <span>No reviews yet</span>
             </div>
 
             <div class="host-listing-stats">
               <div class="host-listing-stat">
-                <span>Cijena / noć</span>
+                <span>Price / night</span>
                 <strong>{{ listing.pricePerNight }} ETH</strong>
               </div>
 
               <div class="host-listing-stat">
-                <span>Ukupno rezervacija</span>
+                <span>Total reservations</span>
                 <strong>{{ listing.reservationsCount }}</strong>
               </div>
 
               <div class="host-listing-stat">
-                <span>Aktivne rezervacije</span>
+                <span>Active reservations</span>
                 <strong>{{ listing.activeReservationsCount }}</strong>
               </div>
 
               <div class="host-listing-stat">
-                <span>Zarađeno</span>
+                <span>Earned</span>
                 <strong>{{ listing.earned.toFixed(2) }} ETH</strong>
               </div>
 
@@ -361,7 +363,7 @@ watch(
               </div>
 
               <div class="host-listing-stat">
-                <span>Ocjena</span>
+                <span>Rating</span>
                 <strong>
                   {{ listing.totalReviews > 0 ? `${listing.averageRating.toFixed(1)} ★` : '—' }}
                 </strong>
@@ -369,11 +371,11 @@ watch(
             </div>
 
             <RouterLink :to="`/listings/${listing.id}`" class="host-listing-link">
-              Otvori oglas
+              View listing
             </RouterLink>
 
             <button class="host-listing-edit-btn" @click="openListingDetailsEditor(listing)">
-              Uredi detalje oglasa
+              Edit listing details
             </button>
           </div>
         </article>
@@ -382,16 +384,16 @@ watch(
       <section class="section-head">
         <div>
           <h2>Reservations for your stays</h2>
-          <p>Pregled svih rezervacija koje su gosti napravili za tvoje oglase.</p>
+          <p>Overview of all bookings made by guests for your listings.</p>
         </div>
       </section>
 
       <section v-if="hostReservations.length === 0" class="empty-state">
         <div class="empty-state__icon">🏠</div>
-        <h3>Još nema rezervacija za tvoje oglase</h3>
+        <h3>No reservations yet</h3>
         <p>
-          Kada gost rezervira jedan od tvojih oglasa, ovdje ćeš vidjeti sve detalje, uključujući
-          status rezervacije, mogućnost otkazivanja, isplate i recenzije.
+          When a guest books your listing, you will see all details here, including reservation
+          status, cancellation options, payouts, and reviews.
         </p>
       </section>
 
@@ -402,7 +404,7 @@ watch(
           :reservation="reservation"
           mode="host"
           :can-review="canReviewReservation(reservation)"
-          :reviewed-label="hostReviewStatus[reservation.id] ? 'Gost ocijenjen' : ''"
+          :reviewed-label="hostReviewStatus[reservation.id] ? 'Guest reviewed' : ''"
           @host-cancel="handleHostCancel"
           @host-payout="handleHostPayout"
           @host-review="openHostReviewForm"
@@ -410,7 +412,7 @@ watch(
       </section>
 
       <section v-if="reviewForm.reservationId" class="review-panel">
-        <h3>Ocijeni gosta</h3>
+        <h3>Review guest</h3>
 
         <div v-if="reviewError" class="alert alert--error">
           {{ reviewError }}
@@ -422,7 +424,7 @@ watch(
 
         <div class="review-grid">
           <div class="form-group">
-            <label>Ocjena</label>
+            <label>Rating</label>
             <select v-model="reviewForm.rating">
               <option :value="5">5</option>
               <option :value="4">4</option>
@@ -433,16 +435,16 @@ watch(
           </div>
 
           <div class="form-group form-group--full">
-            <label>Komentar</label>
+            <label>Comment</label>
             <textarea
               v-model="reviewForm.comment"
               rows="4"
-              placeholder="Napiši kratku recenziju o gostu..."
+              placeholder="Write a short review about the guest..."
             ></textarea>
           </div>
         </div>
 
-        <button class="primary-link-btn" @click="handleHostReview">Spremi recenziju</button>
+        <button class="primary-link-btn" @click="handleHostReview">Submit review</button>
       </section>
 
       <EditListingDetailsModal

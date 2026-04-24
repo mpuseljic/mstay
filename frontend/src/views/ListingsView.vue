@@ -118,25 +118,25 @@ onMounted(async () => {
       <section class="header-card">
         <div>
           <h1>Explore stays</h1>
-          <p>Pretraži, filtriraj i sortiraj oglase po cijeni, lokaciji i ocjeni.</p>
+          <p>Search, filter, and sort listings by price, location, and rating.</p>
         </div>
       </section>
 
       <section class="filters-card">
         <div class="filters-grid">
           <div class="filter-group filter-group--wide">
-            <label>Pretraga</label>
+            <label>Search</label>
             <input
               v-model="filters.search"
               type="text"
-              placeholder="Npr. Pula, Arena, apartman..."
+              placeholder="e.g. Pula, Arena, apartment..."
             />
           </div>
 
           <div class="filter-group">
-            <label>Lokacija</label>
+            <label>Location</label>
             <select v-model="selectedLocation">
-              <option value="">Sve lokacije</option>
+              <option value="">All locations</option>
               <option v-for="location in locationOptions" :key="location" :value="location">
                 {{ location }}
               </option>
@@ -154,20 +154,20 @@ onMounted(async () => {
           </div>
 
           <div class="filter-group">
-            <label>Maks. cijena (ETH)</label>
+            <label>Max price (ETH)</label>
             <input
               v-model="filters.maxPrice"
               type="number"
               min="0"
               step="0.01"
-              placeholder="Npr. 0.5"
+              placeholder="e.g. 0.5"
             />
           </div>
 
           <div class="filter-group">
-            <label>Minimalna ocjena</label>
+            <label>Minimum rating</label>
             <select v-model="filters.minRating">
-              <option value="">Sve</option>
+              <option value="">All</option>
               <option value="5">5.0</option>
               <option value="4">4.0+</option>
               <option value="3">3.0+</option>
@@ -177,29 +177,29 @@ onMounted(async () => {
           </div>
 
           <div class="filter-group">
-            <label>Sortiraj po</label>
+            <label>Sort by</label>
             <select v-model="filters.sortBy">
-              <option value="newest">Najnoviji</option>
-              <option value="price-asc">Cijena: niža prema višoj</option>
-              <option value="price-desc">Cijena: viša prema nižoj</option>
-              <option value="rating-desc">Ocjena: najviša prvo</option>
-              <option value="reviews-desc">Najviše recenzija</option>
-              <option value="title-asc">Naziv A-Z</option>
+              <option value="newest">Newest</option>
+              <option value="price-asc">Price: low to high</option>
+              <option value="price-desc">Price: high to low</option>
+              <option value="rating-desc">Rating: highest first</option>
+              <option value="reviews-desc">Most reviewed</option>
+              <option value="title-asc">Title: A to Z</option>
             </select>
           </div>
 
           <div class="filter-toggle">
             <label>
               <input v-model="filters.onlyActive" type="checkbox" />
-              Samo aktivni oglasi
+              Show active listings only
             </label>
           </div>
         </div>
 
         <div class="filters-actions">
-          <button class="reset-btn" @click="resetFilters">Resetiraj filtere</button>
+          <button class="reset-btn" @click="resetFilters">Reset filters</button>
           <button class="reset-btn reset-btn--primary" @click="runSearch" :disabled="isSearching">
-            {{ isSearching ? 'Pretražujem...' : 'Pretraži' }}
+            {{ isSearching ? 'Searching...' : 'Search' }}
           </button>
         </div>
       </section>
@@ -211,7 +211,7 @@ onMounted(async () => {
       <section class="results-head">
         <div>
           <h2>{{ filteredListings.length }} stays</h2>
-          <p>Rezultati filtrirani prema odabranim kriterijima.</p>
+          <p>Results filtered according to your selected criteria.</p>
         </div>
       </section>
 
@@ -227,10 +227,10 @@ onMounted(async () => {
 
       <section v-else class="empty-state">
         <div class="empty-state__icon">⌕</div>
-        <h3>Nema rezultata</h3>
-        <p>Pokušaj proširiti filtere ili resetirati pretragu.</p>
+        <h3>No results found</h3>
+        <p>Try broadening your filters or resetting your search.</p>
         <button class="reset-btn reset-btn--primary" @click="resetFilters">
-          Prikaži sve oglase
+          Show all listings
         </button>
       </section>
     </main>

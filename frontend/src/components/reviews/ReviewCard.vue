@@ -19,19 +19,19 @@ function stars(rating) {
   <article class="review-card">
     <div class="review-top">
       <div>
-        <strong>{{ stars(review.rating) }}</strong>
-        <p>Ocjena: {{ review.rating }}/5</p>
+        <strong class="review-stars">{{ stars(review.rating) }}</strong>
+        <p class="review-rating">{{ review.rating }}/5 rating</p>
       </div>
 
       <span class="review-date">{{ review.createdAt }}</span>
     </div>
 
-    <div v-if="review.reviewHash" class="review-verified">On-chain verified review</div>
+    <div v-if="review.reviewHash" class="review-verified">Verified on blockchain</div>
 
     <p class="review-comment">{{ review.comment }}</p>
 
     <div class="review-meta">
-      <span>Autor: {{ shortenAddress(review.reviewer) }}</span>
+      <span>Reviewed by {{ shortenAddress(review.reviewer) }}</span>
     </div>
   </article>
 </template>

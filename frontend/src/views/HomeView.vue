@@ -59,8 +59,8 @@ onMounted(async () => {
           <span class="eyebrow">Decentralized travel, elevated</span>
           <h1>Book beautiful stays with on-chain trust.</h1>
           <p>
-            mStay spaja moderan booking doživljaj sa smart contract escrow logikom, MetaMask
-            prijavom i transparentnim rezervacijama na blockchainu.
+            mStay combines a modern booking experience with smart contract escrow, seamless MetaMask
+            login, and fully transparent on-chain reservations.
           </p>
 
           <div class="hero__actions">
@@ -70,17 +70,16 @@ onMounted(async () => {
 
           <div class="hero-onboarding" v-if="!walletAddress">
             <div class="hero-onboarding__item" v-if="!isMetaMaskInstalled">
-              MetaMask nije instaliran. Instaliraj wallet kako bi mogla rezervirati i hostati
-              smještaj.
+              MetaMask is not installed. Please install a wallet to start booking and hosting stays.
             </div>
 
             <div class="hero-onboarding__item" v-else-if="!isCorrectNetwork">
-              Wallet je spojen, ali na pogrešnoj mreži. Promijeni mrežu kako bi nastavila koristiti
-              aplikaciju.
+              Your wallet is connected to the wrong network. Please switch networks to continue.
             </div>
 
             <div class="hero-onboarding__item" v-else>
-              Wallet je spreman — spoji MetaMask za rezervacije, loyalty pogodnosti i profil.
+              Your wallet is ready — connect MetaMask to start booking, earning rewards, and
+              managing your profile.
             </div>
           </div>
 
@@ -96,7 +95,7 @@ onMounted(async () => {
             <div class="hero-card__label">Featured stay</div>
             <div class="hero-card__body">
               <strong>Modern apartments</strong>
-              <span>Secure booking flow with blockchain settlement</span>
+              <span>Secure booking powered by blockchain escrow</span>
             </div>
           </div>
 
@@ -149,7 +148,7 @@ onMounted(async () => {
         <div>
           <span class="section-kicker">Featured listings</span>
           <h2>Discover unique stays</h2>
-          <p>Odabrani oglasi koji trenutno definiraju mStay iskustvo.</p>
+          <p>Hand-picked listings that showcase the best of the mStay experience.</p>
         </div>
 
         <RouterLink to="/listings" class="link-btn"> View all listings </RouterLink>
@@ -168,7 +167,7 @@ onMounted(async () => {
       <section v-else class="empty-hero">
         <div class="empty-hero__icon">✦</div>
         <h3>No featured stays yet</h3>
-        <p>Objavi prvi oglas i započni stvarati decentralizirano booking iskustvo.</p>
+        <p>Create your first listing and start building a decentralized hosting experience.</p>
         <RouterLink to="/create-listing" class="btn btn--primary">
           Create first listing
         </RouterLink>
@@ -179,8 +178,8 @@ onMounted(async () => {
           <span class="section-kicker">How it works</span>
           <h3>Book with escrow protection</h3>
           <p>
-            Gost rezervira smještaj, sredstva se zaključavaju u escrowu, a domaćin ih dobiva tek
-            nakon što rezervacija postane valjana za isplatu.
+            Guests reserve stays by locking funds in a smart contract. Hosts receive payment only
+            after the reservation is successfully completed.
           </p>
         </article>
 
@@ -188,8 +187,8 @@ onMounted(async () => {
           <span class="section-kicker">Host smarter</span>
           <h3>Manage reservations on-chain</h3>
           <p>
-            Domaćini mogu pratiti rezervacije, otkazati ih kada je potrebno i upravljati isplatama
-            unutar vlastitog hosting dashboarda.
+            Hosts can track bookings, manage availability, and handle payouts directly through a
+            transparent on-chain hosting dashboard.
           </p>
         </article>
 
@@ -197,8 +196,8 @@ onMounted(async () => {
           <span class="section-kicker">Transparent flow</span>
           <h3>Every action is verifiable</h3>
           <p>
-            Rezervacije, statusi i isplate temelje se na pametnim ugovorima, što daje veću
-            transparentnost i povjerenje između korisnika.
+            All reservations, status updates, and payouts are recorded on the blockchain, ensuring
+            transparency and trust between users.
           </p>
         </article>
       </section>
@@ -206,10 +205,10 @@ onMounted(async () => {
       <section class="hosting-banner">
         <div class="hosting-banner__copy">
           <span class="section-kicker">For hosts</span>
-          <h2>Turn your stay into an on-chain experience.</h2>
+          <h2>Turn your property into an on-chain experience.</h2>
           <p>
-            Kreiraj listing, dodaj fotografije, upravljaj rezervacijama i koristi escrow isplate kao
-            moderan model digitalnog hostinga.
+            Create listings, upload photos, manage reservations, and receive secure escrow-based
+            payouts through blockchain technology.
           </p>
         </div>
 
@@ -232,22 +231,19 @@ onMounted(async () => {
         <div class="benefit-card">
           <div class="benefit-icon">🔐</div>
           <h3>Secure by design</h3>
-          <p>Escrow rezervacije smanjuju rizik i podižu povjerenje između gosta i domaćina.</p>
+          <p>Escrow-based bookings reduce risk and increase trust between guests and hosts.</p>
         </div>
 
         <div class="benefit-card">
           <div class="benefit-icon">⚡</div>
           <h3>Fast booking flow</h3>
-          <p>Jednostavan UX povezan s MetaMaskom omogućuje brz i jasan proces rezervacije.</p>
+          <p>A seamless UX integrated with MetaMask enables quick and intuitive booking.</p>
         </div>
 
         <div class="benefit-card">
           <div class="benefit-icon">🧾</div>
           <h3>Transparent history</h3>
-          <p>
-            Sve ključne akcije vezane uz rezervacije i isplate mogu se pratiti kroz blockchain
-            logiku.
-          </p>
+          <p>All key actions related to reservations and payments are verifiable on-chain.</p>
         </div>
       </section>
     </main>

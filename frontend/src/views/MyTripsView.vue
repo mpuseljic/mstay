@@ -155,19 +155,19 @@ watch(
           <span class="eyebrow">Guest dashboard</span>
           <h1>My Trips</h1>
           <p>
-            Ovdje vidiš sve svoje rezervacije kao gost, njihov status i moguće akcije poput
-            otkazivanja i ocjenjivanja domaćina nakon završetka boravka.
+            View all your reservations as a guest, their status, and available actions such as
+            cancellation and reviewing hosts after your stay.
           </p>
         </div>
 
         <div class="hero__stats">
           <div class="stat-card">
-            <span class="stat-label">Aktivne rezervacije</span>
+            <span class="stat-label">Active reservations</span>
             <strong class="stat-value">{{ activeTripsCount }}</strong>
           </div>
 
           <div class="stat-card">
-            <span class="stat-label">Završene / arhivirane</span>
+            <span class="stat-label">Completed / archived</span>
             <strong class="stat-value">{{ pastTripsCount }}</strong>
           </div>
         </div>
@@ -184,19 +184,17 @@ watch(
       <section class="section-head">
         <div>
           <h2>Your reservations</h2>
-          <p>Pregled svih rezervacija koje si napravila kao gost.</p>
+          <p>Overview of all bookings you have made as a guest.</p>
         </div>
 
-        <RouterLink to="/listings" class="explore-btn"> Explore stays </RouterLink>
+        <RouterLink to="/listings" class="explore-btn">Explore stays</RouterLink>
       </section>
 
       <section v-if="myReservations.length === 0" class="empty-state">
         <div class="empty-state__icon">✈️</div>
-        <h3>Nemaš još nijednu rezervaciju</h3>
-        <p>
-          Kada rezerviraš neki smještaj, ovdje će se prikazati tvoje aktivne i prošle rezervacije.
-        </p>
-        <RouterLink to="/listings" class="primary-link-btn"> Pregledaj oglase </RouterLink>
+        <h3>You don’t have any reservations yet</h3>
+        <p>Once you book a stay, your active and past reservations will appear here.</p>
+        <RouterLink to="/listings" class="primary-link-btn"> Browse listings </RouterLink>
       </section>
 
       <section v-else class="reservation-grid">
@@ -206,14 +204,14 @@ watch(
           :reservation="reservation"
           mode="guest"
           :can-review="canReviewReservation(reservation)"
-          :reviewed-label="guestReviewStatus[reservation.id] ? 'Domaćin ocijenjen' : ''"
+          :reviewed-label="guestReviewStatus[reservation.id] ? 'Host reviewed' : ''"
           @guest-cancel="handleGuestCancel"
           @guest-review="openGuestReviewForm"
         />
       </section>
 
       <section v-if="reviewForm.reservationId" class="review-panel">
-        <h3>Ocijeni domaćina</h3>
+        <h3>Review host</h3>
 
         <div v-if="reviewError" class="alert alert--error">
           {{ reviewError }}
@@ -225,7 +223,7 @@ watch(
 
         <div class="review-grid">
           <div class="form-group">
-            <label>Ocjena</label>
+            <label>Rating</label>
             <select v-model="reviewForm.rating">
               <option :value="5">5</option>
               <option :value="4">4</option>
@@ -236,16 +234,16 @@ watch(
           </div>
 
           <div class="form-group form-group--full">
-            <label>Komentar</label>
+            <label>Comment</label>
             <textarea
               v-model="reviewForm.comment"
               rows="4"
-              placeholder="Napiši kratku recenziju o domaćinu..."
+              placeholder="Write a short review about the host..."
             ></textarea>
           </div>
         </div>
 
-        <button class="primary-link-btn" @click="handleGuestReview">Spremi recenziju</button>
+        <button class="primary-link-btn" @click="handleGuestReview">Submit review</button>
       </section>
     </main>
 

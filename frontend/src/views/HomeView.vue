@@ -4,6 +4,8 @@ import { RouterLink, useRouter } from 'vue-router'
 import AppNavbar from '../components/layout/AppNavbar.vue'
 import AppFooter from '../components/layout/AppFooter.vue'
 import ListingCard from '../components/listings/ListingCard.vue'
+import AiSearchChat from '@/components/ai/AiSearchChat.vue'
+import RecommendedListings from '@/components/recommendations/RecommendedListings.vue'
 import { useMstay } from '../composables/useMstay'
 
 const router = useRouter()
@@ -144,6 +146,8 @@ onMounted(async () => {
         </div>
       </section>
 
+      <RecommendedListings v-if="walletAddress" :wallet-address="walletAddress" />
+
       <section class="section-head">
         <div>
           <span class="section-kicker">Featured listings</span>
@@ -248,6 +252,7 @@ onMounted(async () => {
       </section>
     </main>
 
+    <AiSearchChat />
     <AppFooter />
   </div>
 </template>

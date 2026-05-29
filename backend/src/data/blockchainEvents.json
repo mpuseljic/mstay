@@ -63,6 +63,162 @@
       "logIndex": null,
       "blockNumber": null,
       "capturedAt": "2026-04-20T08:24:14.812Z"
+    },
+    {
+      "id": "2",
+      "listingId": "1",
+      "guest": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+      "host": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+      "checkInDate": "1776556800",
+      "checkOutDate": "1776643200",
+      "totalPrice": "1",
+      "transactionHash": null,
+      "logIndex": null,
+      "blockNumber": null,
+      "capturedAt": "2026-04-24T06:48:20.616Z"
+    },
+    {
+      "id": "2",
+      "listingId": "1",
+      "guest": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+      "host": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+      "checkInDate": "1776556800",
+      "checkOutDate": "1776643200",
+      "totalPrice": "1",
+      "transactionHash": null,
+      "logIndex": null,
+      "blockNumber": null,
+      "capturedAt": "2026-04-24T06:49:33.660Z"
+    },
+    {
+      "id": "2",
+      "listingId": "1",
+      "guest": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+      "host": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+      "checkInDate": "1776556800",
+      "checkOutDate": "1776643200",
+      "totalPrice": "1",
+      "transactionHash": null,
+      "logIndex": null,
+      "blockNumber": null,
+      "capturedAt": "2026-04-24T06:49:44.483Z"
+    },
+    {
+      "id": "2",
+      "listingId": "1",
+      "guest": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+      "host": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+      "checkInDate": "1776556800",
+      "checkOutDate": "1776643200",
+      "totalPrice": "1",
+      "transactionHash": null,
+      "logIndex": null,
+      "blockNumber": null,
+      "capturedAt": "2026-04-24T06:50:09.560Z"
+    },
+    {
+      "id": "2",
+      "listingId": "1",
+      "guest": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+      "host": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+      "checkInDate": "1776556800",
+      "checkOutDate": "1776643200",
+      "totalPrice": "1",
+      "transactionHash": null,
+      "logIndex": null,
+      "blockNumber": null,
+      "capturedAt": "2026-04-24T06:50:11.802Z"
+    },
+    {
+      "id": "2",
+      "listingId": "1",
+      "guest": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+      "host": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+      "checkInDate": "1776556800",
+      "checkOutDate": "1776643200",
+      "totalPrice": "1",
+      "transactionHash": null,
+      "logIndex": null,
+      "blockNumber": null,
+      "capturedAt": "2026-04-24T07:12:21.245Z"
+    },
+    {
+      "id": "2",
+      "listingId": "1",
+      "guest": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+      "host": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+      "checkInDate": "1776556800",
+      "checkOutDate": "1776643200",
+      "totalPrice": "1",
+      "transactionHash": null,
+      "logIndex": null,
+      "blockNumber": null,
+      "capturedAt": "2026-04-24T07:13:51.349Z"
+    },
+    {
+      "id": "3",
+      "listingId": "1",
+      "guest": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+      "host": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+      "checkInDate": "1776988800",
+      "checkOutDate": "1777075200",
+      "totalPrice": "1",
+      "transactionHash": null,
+      "logIndex": null,
+      "blockNumber": null,
+      "capturedAt": "2026-04-24T07:15:28.080Z"
+    },
+    {
+      "id": "4",
+      "listingId": "1",
+      "guest": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+      "host": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+      "checkInDate": "1777075200",
+      "checkOutDate": "1777161600",
+      "totalPrice": "1",
+      "transactionHash": null,
+      "logIndex": null,
+      "blockNumber": null,
+      "capturedAt": "2026-04-24T07:30:21.386Z"
+    },
+    {
+      "id": "4",
+      "listingId": "1",
+      "guest": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+      "host": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+      "checkInDate": "1777075200",
+      "checkOutDate": "1777161600",
+      "totalPrice": "1",
+      "transactionHash": null,
+      "logIndex": null,
+      "blockNumber": null,
+      "capturedAt": "2026-04-24T07:39:14.677Z"
+    },
+    {
+      "id": "4",
+      "listingId": "1",
+      "guest": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+      "host": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+      "checkInDate": "1777075200",
+      "checkOutDate": "1777161600",
+      "totalPrice": "1",
+      "transactionHash": null,
+      "logIndex": null,
+      "blockNumber": null,
+      "capturedAt": "2026-04-24T07:45:52.040Z"
+    },
+    {
+      "id": "5",
+      "listingId": "1",
+      "guest": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+      "host": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+      "checkInDate": "1777161600",
+      "checkOutDate": "1777248000",
+      "totalPrice": "1",
+      "transactionHash": null,
+      "logIndex": null,
+      "blockNumber": null,
+      "capturedAt": "2026-04-24T07:48:41.096Z"
     }
   ],
   "reviews": [],
@@ -75,7 +231,27 @@
       "logIndex": 0,
       "blockNumber": 6,
       "capturedAt": "2026-04-10T09:37:38.686Z"
+    },
+    {
+      "id": "1",
+      "host": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+      "amount": "108000000000000000000",
+      "transactionHash": "0x653f6e31891fb0c5abd9c31a2f06735fc2295e20da39a798abbc09e386b4ab3f",
+      "logIndex": 0,
+      "blockNumber": 20,
+      "capturedAt": "2026-05-29T09:55:44.898Z"
     }
   ],
-  "cancellations": []
+  "cancellations": [],
+  "rewards": [
+    {
+      "user": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+      "amount": "20000000000000000000",
+      "reason": "payout",
+      "transactionHash": "0x653f6e31891fb0c5abd9c31a2f06735fc2295e20da39a798abbc09e386b4ab3f",
+      "logIndex": 2,
+      "blockNumber": 20,
+      "capturedAt": "2026-05-29T09:55:44.904Z"
+    }
+  ]
 }

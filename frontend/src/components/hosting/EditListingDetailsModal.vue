@@ -4,6 +4,7 @@ import { useListingDetails } from '@/composables/useListingDetails'
 import { uploadImage } from '@/services/upload'
 import LocationPickerMap from './LocationPickerMap.vue'
 import { geocodeLocation } from '@/services/geocode'
+import { useMstay } from '@/composables/useMstay'
 
 const props = defineProps({
   open: {
@@ -17,6 +18,7 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['close', 'saved'])
+const { walletAddress } = useMstay()
 const geocodeQuery = ref('')
 const isGeocoding = ref(false)
 const geocodeError = ref('')
@@ -174,6 +176,7 @@ async function handleGeocode() {
 async function handleSave() {
   await updateListingDetails({
     listingId: form.value.listingId,
+    hostAddress: walletAddress.value,
     summary: form.value.summary,
     descriptionShort: form.value.descriptionShort,
     descriptionLong: form.value.descriptionLong,

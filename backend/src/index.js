@@ -12,6 +12,8 @@ import {
   calculateAverageRating,
   formatEthFromWei,
 } from "./utils/analytics.js";
+import { aiSearchListings } from "./services/aiSearchService.js";
+import { getRecommendations } from "./services/recommendationService.js";
 
 dotenv.config();
 
@@ -435,6 +437,9 @@ app.post("/api/listing-details/update", (req, res) => {
 
     const cleanData = {
       listingId,
+      hostAddress: String(
+        payload.hostAddress || payload.walletAddress || "",
+      ).toLowerCase(),
       summary: String(payload.summary || "").trim(),
       descriptionShort: String(payload.descriptionShort || "").trim(),
       descriptionLong: String(payload.descriptionLong || "").trim(),
@@ -780,6 +785,60 @@ app.get("/api/analytics/host/:wallet", (req, res) => {
       success: false,
       message: "Greška kod dohvaćanja host analitike.",
       error: err.message,
+    });
+  }
+});
+
+app.post("/api/ai-search", (req, res) => {
+  try {
+    const { message } = req.body;
+
+    if (!message || !String(message).trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Search message is required.",
+      });
+    }
+
+    const result = aiSearchListings(message);
+
+    return res.json({
+      success: true,
+      ...result,
+    });
+  } catch (error) {
+    console.error("AI search error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "AI search failed.",
+    });
+  }
+});
+
+app.get("/api/recommendations/:walletAddress", (req, res) => {
+  try {
+    const { walletAddress } = req.params;
+
+    if (!walletAddress) {
+      return res.status(400).json({
+        success: false,
+        message: "Wallet address is required.",
+      });
+    }
+
+    const result = getRecommendations(walletAddress);
+
+    return res.json({
+      success: true,
+      ...result,
+    });
+  } catch (error) {
+    console.error("Recommendation error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Recommendation system failed.",
     });
   }
 });

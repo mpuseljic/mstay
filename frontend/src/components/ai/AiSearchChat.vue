@@ -119,10 +119,7 @@ async function sendMessage() {
     messages.value.push({
       id: Date.now() + Math.random(),
       role: 'ai',
-      text:
-        count > 0
-          ? `I found ${count} matching stay${count === 1 ? '' : 's'} for you.`
-          : 'I could not find matching stays. Try another location, price or amenity.',
+      text: response.answer,
       filters: response.filters,
       results: response.results || [],
     })

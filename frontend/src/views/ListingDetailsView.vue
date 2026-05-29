@@ -523,31 +523,24 @@ onMounted(async () => {
       <section v-if="successMsg" class="alert alert--success">{{ successMsg }}</section>
       <section v-if="errorMsg" class="alert alert--error">{{ errorMsg }}</section>
 
-      <section class="gallery" v-if="listing.imageUrls?.length">
-        <div class="gallery__main" @click="openLightbox(activeImageIndex)">
-          <img v-if="mainImage" :src="mainImage" :alt="listing.title" class="gallery__img" />
-          <div v-else class="gallery__main-placeholder">
-            <span class="gallery__label">mStay Stay</span>
-          </div>
+      <section class="airbnb-gallery" v-if="listing.imageUrls?.length">
+        <button class="airbnb-gallery__main" type="button" @click="openLightbox(0)">
+          <img :src="allImages[0]" :alt="listing.title" />
+        </button>
 
-          <div v-if="mainImage" class="gallery__main-badge">Main photo</div>
-        </div>
+        <button
+          v-for="(image, index) in allImages.slice(1, 5)"
+          :key="index"
+          class="airbnb-gallery__item"
+          type="button"
+          @click="openLightbox(index + 1)"
+        >
+          <img :src="image" :alt="`${listing.title} ${index + 2}`" />
+        </button>
 
-        <div class="gallery__side" v-if="galleryImages.length">
-          <button
-            v-for="item in galleryImages"
-            :key="item.index"
-            class="gallery__mini"
-            type="button"
-            @click="setActiveImageByIndex(item.index)"
-          >
-            <img
-              :src="item.img"
-              :alt="`${listing.title} ${item.index + 1}`"
-              class="gallery__mini-img"
-            />
-          </button>
-        </div>
+        <button class="airbnb-gallery__show" type="button" @click="openLightbox(0)">
+          ▦ Show all photos
+        </button>
       </section>
 
       <section class="gallery" v-else>
@@ -1142,73 +1135,54 @@ onMounted(async () => {
   border: 1px solid var(--border);
 }
 
-.gallery {
+.airbnb-gallery {
+  position: relative;
   display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 16px;
-  margin-bottom: 28px;
-}
-
-.gallery__main {
-  min-height: 420px;
-  border-radius: 24px;
-  border: 1px solid var(--border);
+  grid-template-columns: 2fr 1fr 1fr;
+  grid-template-rows: 220px 220px;
+  gap: 8px;
+  margin-bottom: 36px;
+  border-radius: 18px;
   overflow: hidden;
-  background: #f3f4f6;
 }
 
-.gallery__side {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 16px;
-  max-height: 420px;
-  overflow: auto;
-}
-
-.gallery__mini {
-  min-height: 120px;
-  border-radius: 24px;
-  border: 1px solid var(--border);
-  overflow: hidden;
-  background: #f3f4f6;
+.airbnb-gallery button {
+  border: 0;
   padding: 0;
+  background: #f3f4f6;
   cursor: pointer;
-  transition:
-    transform 0.18s ease,
-    box-shadow 0.18s ease,
-    border-color 0.18s ease;
+  overflow: hidden;
 }
 
-.gallery__mini:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 24px rgba(17, 24, 39, 0.08);
-  border-color: #d1d5db;
+.airbnb-gallery__main {
+  grid-row: span 2;
 }
 
-.gallery__img,
-.gallery__mini-img {
+.airbnb-gallery img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  display: block;
+  transition:
+    transform 0.25s ease,
+    filter 0.25s ease;
 }
 
-.gallery__main-placeholder {
-  width: 100%;
-  height: 100%;
-  background:
-    linear-gradient(135deg, rgba(255, 56, 92, 0.16), rgba(255, 56, 92, 0.04)),
-    linear-gradient(135deg, #f9fafb, #f3f4f6);
-  display: flex;
-  align-items: end;
-  padding: 20px;
+.airbnb-gallery button:hover img {
+  transform: scale(1.03);
+  filter: brightness(0.88);
 }
 
-.gallery__label {
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 999px;
-  padding: 8px 12px;
+.airbnb-gallery__show {
+  position: absolute;
+  right: 22px;
+  bottom: 22px;
+  background: #fff !important;
+  color: #111;
+  border: 1px solid #111 !important;
+  border-radius: 10px;
+  padding: 11px 16px !important;
   font-weight: 700;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
 }
 
 .lightbox {
@@ -1361,27 +1335,28 @@ onMounted(async () => {
 
 .booking-card {
   position: sticky;
-  top: 100px;
+  top: 96px;
   background: white;
-  border: 1px solid var(--border);
-  border-radius: 24px;
-  padding: 22px;
-  box-shadow: var(--shadow);
+  border: 1px solid #dddddd;
+  border-radius: 18px;
+  padding: 24px;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.14);
 }
 
 .price-top {
   display: flex;
-  align-items: end;
-  gap: 8px;
+  align-items: baseline;
+  gap: 6px;
   margin-bottom: 18px;
 }
 
 .price-top strong {
-  font-size: 1.8rem;
+  font-size: 1.45rem;
+  color: #111;
 }
 
 .price-top span {
-  color: var(--muted);
+  color: #555;
 }
 
 .form-group {
@@ -1419,12 +1394,14 @@ input {
 .book-btn {
   width: 100%;
   border: 0;
-  border-radius: 16px;
+  border-radius: 12px;
   padding: 15px 16px;
-  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  background: linear-gradient(90deg, #ff385c 0%, #e61e4d 100%);
   color: white;
-  font-weight: 700;
+  font-size: 1rem;
+  font-weight: 800;
   cursor: pointer;
+  margin-top: 8px;
 }
 
 .book-btn:disabled {
@@ -1433,10 +1410,10 @@ input {
 }
 
 .booking-note {
+  text-align: center;
   margin: 14px 0 0;
-  color: var(--muted);
+  color: #555;
   font-size: 0.92rem;
-  line-height: 1.6;
 }
 
 .alert {
@@ -1537,20 +1514,21 @@ input {
 .booking-date-box {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  border: 1px solid #bdbdbd;
-  border-radius: 18px;
+  border: 1px solid #8f8f8f;
+  border-radius: 12px;
   overflow: hidden;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
   cursor: pointer;
   background: #fff;
 }
 
 .booking-date-cell {
-  padding: 14px 16px;
-  min-height: 78px;
+  padding: 13px 14px;
+  min-height: 72px;
   display: flex;
   flex-direction: column;
   justify-content: center;
+  gap: 6px;
 }
 
 .booking-date-cell + .booking-date-cell {
@@ -1558,11 +1536,22 @@ input {
 }
 
 .booking-label {
-  font-size: 0.78rem;
+  display: block;
+  font-size: 0.68rem;
   font-weight: 800;
-  letter-spacing: 0.02em;
-  color: #111827;
-  margin-bottom: 4px;
+  letter-spacing: 0.04em;
+  color: #111;
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+.booking-date-cell strong {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #222;
+  line-height: 1.25;
+  word-break: normal;
 }
 
 .booking-info-strip {
@@ -2291,5 +2280,37 @@ input {
 
 .details-rating--muted {
   color: var(--muted);
+}
+
+@media (max-width: 1100px) {
+  .airbnb-gallery {
+    grid-template-columns: 1fr;
+    grid-template-rows: 360px;
+  }
+
+  .airbnb-gallery__item {
+    display: none;
+  }
+
+  .booking-card {
+    position: static;
+  }
+}
+
+@media (max-width: 700px) {
+  .page {
+    padding: 20px 16px 44px;
+  }
+
+  .airbnb-gallery {
+    grid-template-rows: 280px;
+    border-radius: 16px;
+  }
+
+  .airbnb-gallery__show {
+    right: 14px;
+    bottom: 14px;
+    padding: 9px 12px !important;
+  }
 }
 </style>

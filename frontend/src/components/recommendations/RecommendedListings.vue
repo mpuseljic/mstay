@@ -56,7 +56,7 @@
             {{ listing.reasons[0] }}
           </p>
 
-          <RouterLink :to="`/listing/${listing.listingId}`" class="details-link">
+          <RouterLink :to="`/listings/${listing.listingId}`" class="details-link">
             View details
           </RouterLink>
         </div>

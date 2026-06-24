@@ -46,6 +46,79 @@ export function startBlockchainListener() {
     console.log("RPC:", rpcUrl);
 
     coreContract.on(
+      "ListingCreated",
+      async (
+        id,
+        host,
+        title,
+        location,
+        imageUrls,
+        pricePerNight,
+        eventPayload,
+      ) => {
+        try {
+          const data = readEvents();
+
+          if (!Array.isArray(data.listings)) {
+            data.listings = [];
+          }
+
+          const transactionHash =
+            eventPayload?.log?.transactionHash ||
+            eventPayload?.transactionHash ||
+            null;
+
+          const logIndex =
+            eventPayload?.log?.index ?? eventPayload?.index ?? null;
+
+          const blockNumber =
+            eventPayload?.log?.blockNumber ?? eventPayload?.blockNumber ?? null;
+
+          if (
+            transactionHash &&
+            logIndex !== null &&
+            eventAlreadyStored(data.listings, transactionHash, logIndex)
+          ) {
+            return;
+          }
+
+          const existingIndex = data.listings.findIndex(
+            (item) => Number(item.id) === Number(id),
+          );
+
+          const listingData = {
+            id: id.toString(),
+            listingId: id.toString(),
+            host,
+            title,
+            location,
+            pricePerNight: pricePerNight.toString(),
+            isActive: true,
+            transactionHash,
+            logIndex,
+            blockNumber,
+            capturedAt: new Date().toISOString(),
+          };
+
+          if (existingIndex >= 0) {
+            data.listings[existingIndex] = {
+              ...data.listings[existingIndex],
+              ...listingData,
+            };
+          } else {
+            data.listings.push(listingData);
+          }
+
+          writeEvents(data);
+
+          console.log("Spremljen ListingCreated:", id.toString());
+        } catch (err) {
+          console.error("Greška kod ListingCreated listenera:", err);
+        }
+      },
+    );
+
+    coreContract.on(
       "ReservationCreated",
       async (
         id,

@@ -29,6 +29,8 @@ import {
   switchToChain,
 } from '../services/web3'
 
+import { syncListingsToBackend } from '../services/listingSync'
+
 const walletAddress = ref('')
 const listingCount = ref('')
 const listings = ref([])
@@ -177,6 +179,12 @@ async function loadListings() {
     )
 
     listings.value = mappedListings
+
+    try {
+      await syncListingsToBackend(mappedListings)
+    } catch (err) {
+      console.warn('Listing sync failed:', err)
+    }
   } catch (err) {
     errorMsg.value = err.message || 'Greška pri dohvaćanju oglasa.'
   }

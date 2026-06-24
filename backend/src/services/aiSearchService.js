@@ -2,6 +2,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 
 import { readJsonSafe, normalizeText } from "../utils/aiHelpers.js";
+import { mergeListings } from "./listingMergeService.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -97,24 +98,14 @@ function hasWord(text, words) {
 }
 
 function getAllListingsForSearch() {
-  const data = readJsonSafe(path.join(DATA_DIR, "listingDetails.json"), []);
-
-  if (Array.isArray(data)) {
-    return data.map((item) => ({
-      listingId: Number(item.listingId),
-      ...item,
-    }));
-  }
-
-  return Object.entries(data).map(([listingId, details]) => ({
-    listingId: Number(listingId),
-    ...details,
-  }));
+  return mergeListings();
 }
 
 function getSearchableText(listing) {
   const parts = [
     listing.title,
+    listing.location,
+    listing.imageUrl,
     listing.summary,
     listing.descriptionShort,
     listing.descriptionLong,
@@ -351,11 +342,7 @@ function calculateSearchScore(listing, filters, message) {
 function mapListingForSearch(listing, result) {
   return {
     listingId: Number(listing.listingId),
-    title:
-      listing.title ||
-      listing.summary ||
-      listing.locationTitle ||
-      `Listing #${listing.listingId}`,
+    title: listing.title || `Listing #${listing.listingId}`,
     summary: listing.summary || "",
     locationTitle: listing.locationTitle || "",
     locationDescription: listing.locationDescription || "",

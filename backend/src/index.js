@@ -6,7 +6,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { startBlockchainListener } from "./listeners/blockchainListener.js";
-import { readEvents } from "./utils/eventsStore.js";
+import { readEvents, writeEvents } from "./utils/eventsStore.js";
 import {
   normalizeAddress,
   calculateAverageRating,
@@ -839,6 +839,72 @@ app.get("/api/recommendations/:walletAddress", (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Recommendation system failed.",
+    });
+  }
+});
+
+app.post("/api/sync-listings", (req, res) => {
+  try {
+    const { listings = [] } = req.body || {};
+
+    if (!Array.isArray(listings)) {
+      return res.status(400).json({
+        success: false,
+        message: "Listings must be an array.",
+      });
+    }
+
+    const events = readEvents();
+
+    if (!Array.isArray(events.listings)) {
+      events.listings = [];
+    }
+
+    listings.forEach((listing) => {
+      const listingId = String(listing.id || listing.listingId || "");
+
+      if (!listingId) return;
+
+      const existingIndex = events.listings.findIndex(
+        (item) => String(item.id || item.listingId) === listingId,
+      );
+
+      const cleanListing = {
+        id: listingId,
+        listingId,
+        host: listing.host || listing.hostAddress || "",
+        title: listing.title || "",
+        location: listing.location || "",
+        imageUrls: Array.isArray(listing.imageUrls) ? listing.imageUrls : [],
+        imageUrl: listing.imageUrl || listing.imageUrls?.[0] || "",
+        pricePerNight: listing.pricePerNight || listing.price || null,
+        isActive: listing.isActive ?? true,
+        syncedAt: new Date().toISOString(),
+      };
+
+      if (existingIndex >= 0) {
+        events.listings[existingIndex] = {
+          ...events.listings[existingIndex],
+          ...cleanListing,
+        };
+      } else {
+        events.listings.push(cleanListing);
+      }
+    });
+
+    writeEvents(events);
+
+    return res.json({
+      success: true,
+      count: events.listings.length,
+      listings: events.listings,
+    });
+  } catch (err) {
+    console.error("Greška kod sync-listings:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Greška kod sinkronizacije listinga.",
+      error: err.message,
     });
   }
 });

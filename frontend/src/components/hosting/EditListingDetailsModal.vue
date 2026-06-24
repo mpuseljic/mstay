@@ -56,6 +56,13 @@ const uploadingRoomIndex = ref(null)
 function createDefaultForm(listing) {
   return {
     listingId: listing?.id ? Number(listing.id) : null,
+    hostAddress: walletAddress.value,
+
+    title: props.listing?.title || '',
+    baseLocation: props.listing?.location || '',
+    pricePerNight: props.listing?.pricePerNight || props.listing?.price || '',
+    isActive: props.listing?.isActive ?? true,
+
     summary: '',
     descriptionShort: '',
     descriptionLong: '',

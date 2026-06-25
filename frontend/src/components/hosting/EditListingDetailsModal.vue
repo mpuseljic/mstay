@@ -56,13 +56,6 @@ const uploadingRoomIndex = ref(null)
 function createDefaultForm(listing) {
   return {
     listingId: listing?.id ? Number(listing.id) : null,
-    hostAddress: walletAddress.value,
-
-    title: props.listing?.title || '',
-    baseLocation: props.listing?.location || '',
-    pricePerNight: props.listing?.pricePerNight || props.listing?.price || '',
-    isActive: props.listing?.isActive ?? true,
-
     summary: '',
     descriptionShort: '',
     descriptionLong: '',
@@ -183,7 +176,14 @@ async function handleGeocode() {
 async function handleSave() {
   await updateListingDetails({
     listingId: form.value.listingId,
+    title: props.listing?.title || '',
+    baseLocation: props.listing?.location || '',
+    location: props.listing?.location || '',
+    imageUrls: props.listing?.imageUrls || [],
+    imageUrl: props.listing?.imageUrl || props.listing?.imageUrls?.[0] || '',
+    pricePerNight: props.listing?.pricePerNight || null,
     hostAddress: walletAddress.value,
+
     summary: form.value.summary,
     descriptionShort: form.value.descriptionShort,
     descriptionLong: form.value.descriptionLong,

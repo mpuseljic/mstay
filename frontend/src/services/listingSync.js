@@ -1,7 +1,7 @@
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api'
 
 export async function syncListingsToBackend(listings) {
-  const response = await fetch(`${API_BASE}/api/sync-listings`, {
+  const response = await fetch(`${API_BASE}/sync-listings`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

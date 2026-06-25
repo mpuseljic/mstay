@@ -14,6 +14,7 @@ import {
 } from "./utils/analytics.js";
 import { aiSearchListings } from "./services/aiSearchService.js";
 import { getRecommendations } from "./services/recommendationService.js";
+import { mergeListings } from "./services/listingMergeService.js";
 
 dotenv.config();
 
@@ -440,6 +441,15 @@ app.post("/api/listing-details/update", (req, res) => {
       hostAddress: String(
         payload.hostAddress || payload.walletAddress || "",
       ).toLowerCase(),
+
+      title: String(payload.title || "").trim(),
+      baseLocation: String(
+        payload.baseLocation || payload.location || "",
+      ).trim(),
+      imageUrls: Array.isArray(payload.imageUrls) ? payload.imageUrls : [],
+      imageUrl: String(payload.imageUrl || payload.imageUrls?.[0] || "").trim(),
+      pricePerNight: payload.pricePerNight ?? null,
+
       summary: String(payload.summary || "").trim(),
       descriptionShort: String(payload.descriptionShort || "").trim(),
       descriptionLong: String(payload.descriptionLong || "").trim(),
@@ -789,7 +799,7 @@ app.get("/api/analytics/host/:wallet", (req, res) => {
   }
 });
 
-app.post("/api/ai-search", (req, res) => {
+app.post("/api/ai-search", async (req, res) => {
   try {
     const { message } = req.body;
 
@@ -800,7 +810,7 @@ app.post("/api/ai-search", (req, res) => {
       });
     }
 
-    const result = aiSearchListings(message);
+    const result = await aiSearchListings(message);
 
     return res.json({
       success: true,
@@ -816,7 +826,30 @@ app.post("/api/ai-search", (req, res) => {
   }
 });
 
-app.get("/api/recommendations/:walletAddress", (req, res) => {
+app.get("/api/debug/merged-listings", (req, res) => {
+  const listings = mergeListings();
+
+  return res.json({
+    success: true,
+    count: listings.length,
+    listings: listings.map((x) => ({
+      listingId: x.listingId,
+      title: x.title,
+      hostAddress: x.hostAddress,
+      host: x.host,
+      location: x.location,
+      locationTitle: x.locationTitle,
+      propertyType: x.propertyType,
+      guestCount: x.guestCount,
+      amenities: x.amenities,
+      pricePerNight: x.pricePerNight,
+      imageUrls: x.imageUrls,
+      imageUrl: x.imageUrl,
+    })),
+  });
+});
+
+app.get("/api/recommendations/:walletAddress", async (req, res) => {
   try {
     const { walletAddress } = req.params;
 
@@ -827,7 +860,7 @@ app.get("/api/recommendations/:walletAddress", (req, res) => {
       });
     }
 
-    const result = getRecommendations(walletAddress);
+    const result = await getRecommendations(walletAddress);
 
     return res.json({
       success: true,
@@ -839,6 +872,7 @@ app.get("/api/recommendations/:walletAddress", (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Recommendation system failed.",
+      error: error.message,
     });
   }
 });

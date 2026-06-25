@@ -3,6 +3,12 @@ import { fileURLToPath } from "url";
 
 import { readJsonSafe, normalizeText } from "../utils/aiHelpers.js";
 import { mergeListings } from "./listingMergeService.js";
+import {
+  readEmbeddings,
+  syncListingEmbeddings,
+  createEmbedding,
+  cosineSimilarity,
+} from "./embeddingService.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -15,205 +21,178 @@ function sameAddress(a, b) {
 function getEventsStore() {
   return readJsonSafe(path.join(DATA_DIR, "blockchainEvents.json"), {
     reservations: [],
-    reviews: [],
-    payouts: [],
     cancellations: [],
   });
 }
 
-function getAllListings() {
-  return mergeListings();
-}
-
 function getCancelledReservationIds() {
   const events = getEventsStore();
-
-  return new Set((events.cancellations || []).map((item) => String(item.id)));
+  return new Set((events.cancellations || []).map((x) => String(x.id)));
 }
 
-function getGuestReservations(walletAddress) {
+function getActiveGuestReservations(walletAddress) {
   const events = getEventsStore();
   const cancelledIds = getCancelledReservationIds();
 
   return (events.reservations || [])
-    .filter((reservation) => sameAddress(reservation.guest, walletAddress))
-    .filter((reservation) => !cancelledIds.has(String(reservation.id)));
+    .filter((r) => sameAddress(r.guest, walletAddress))
+    .filter((r) => !cancelledIds.has(String(r.id)));
 }
 
-function getUniqueReservedListingIds(walletAddress) {
+function getReservedListingIds(walletAddress) {
   return [
     ...new Set(
-      getGuestReservations(walletAddress)
-        .map((reservation) => Number(reservation.listingId))
+      getActiveGuestReservations(walletAddress)
+        .map((r) => Number(r.listingId))
         .filter(Boolean),
     ),
   ];
 }
 
-function getMostFrequentValueMap(values) {
-  return values.reduce((acc, value) => {
-    const key = normalizeText(value);
-
-    if (!key) return acc;
-
-    acc[key] = (acc[key] || 0) + 1;
-
-    return acc;
-  }, {});
-}
-
-function getListingLocationTokens(listing) {
-  const text = normalizeText(
+function locationTokens(listing) {
+  return normalizeText(
     `${listing.location || ""} ${listing.locationTitle || ""} ${listing.locationDescription || ""}`,
-  );
-
-  return [
-    ...new Set(
-      text
-        .split(/[\s,.-]+/)
-        .map((x) => x.trim())
-        .filter((x) => x.length >= 3),
-    ),
-  ];
+  )
+    .split(/[\s,.-]+/)
+    .filter((x) => x.length >= 3);
 }
 
-function buildGuestProfile(walletAddress) {
-  const listings = getAllListings();
-  const reservedListingIds = getUniqueReservedListingIds(walletAddress);
+function buildUserPreferenceText(walletAddress, listings) {
+  const reservedIds = getReservedListingIds(walletAddress);
 
-  const reservedListings = reservedListingIds
-    .map((id) => listings.find((listing) => Number(listing.listingId) === id))
+  const reservedListings = reservedIds
+    .map((id) => listings.find((x) => Number(x.listingId) === id))
     .filter(Boolean);
 
-  const locationTokens = reservedListings.flatMap(getListingLocationTokens);
+  if (!reservedListings.length) {
+    return "User has no previous reservations. Recommend active stays with complete descriptions, useful amenities and good guest capacity.";
+  }
 
-  const propertyTypes = reservedListings
-    .map((listing) => listing.propertyType)
+  return reservedListings
+    .map((listing) =>
+      [
+        `Previously booked: ${listing.title || ""}`,
+        `Location: ${listing.location || listing.locationTitle || ""}`,
+        `Property type: ${listing.propertyType || ""}`,
+        `Capacity: ${listing.guestCount || ""} guests`,
+        `Price: ${listing.pricePerNight || ""}`,
+        `Amenities: ${Array.isArray(listing.amenities) ? listing.amenities.join(", ") : ""}`,
+        `Description: ${listing.summary || ""} ${listing.descriptionShort || ""}`,
+      ].join("\n"),
+    )
+    .join("\n\n");
+}
+
+function buildProfile(walletAddress, listings) {
+  const reservedIds = getReservedListingIds(walletAddress);
+
+  const reservedListings = reservedIds
+    .map((id) => listings.find((x) => Number(x.listingId) === id))
     .filter(Boolean);
 
-  const amenities = reservedListings.flatMap((listing) =>
-    Array.isArray(listing.amenities) ? listing.amenities : [],
-  );
+  const amenities = new Set();
+  const types = new Set();
+  const locations = new Set();
 
-  const guestCounts = reservedListings
-    .map((listing) => Number(listing.guestCount || 0))
-    .filter((x) => x > 0);
+  let preferredGuestCount = 0;
+  let priceSum = 0;
+  let priceCount = 0;
 
-  const prices = reservedListings
-    .map((listing) => Number(listing.pricePerNight || listing.price || 0))
-    .filter((x) => x > 0);
+  reservedListings.forEach((listing) => {
+    locationTokens(listing).forEach((x) => locations.add(x));
+
+    if (listing.propertyType) types.add(normalizeText(listing.propertyType));
+
+    if (Array.isArray(listing.amenities)) {
+      listing.amenities.forEach((x) => amenities.add(normalizeText(x)));
+    }
+
+    preferredGuestCount = Math.max(
+      preferredGuestCount,
+      Number(listing.guestCount || 0),
+    );
+
+    const price = Number(listing.pricePerNight || listing.price || 0);
+    if (price > 0) {
+      priceSum += price;
+      priceCount += 1;
+    }
+  });
 
   return {
     walletAddress,
-    reservationCount: getGuestReservations(walletAddress).length,
-    uniqueReservationCount: reservedListingIds.length,
-    reservedListingIds,
-    locationTokens: getMostFrequentValueMap(locationTokens),
-    propertyTypes: getMostFrequentValueMap(propertyTypes),
-    amenities: getMostFrequentValueMap(amenities),
-    preferredGuestCount: guestCounts.length ? Math.max(...guestCounts) : 0,
-    averagePrice:
-      prices.length > 0
-        ? prices.reduce((sum, price) => sum + price, 0) / prices.length
-        : 0,
+    reservationCount: getActiveGuestReservations(walletAddress).length,
+    uniqueReservationCount: reservedIds.length,
+    reservedListingIds: reservedIds,
+    amenities: [...amenities],
+    propertyTypes: [...types],
+    locationTokens: [...locations],
+    preferredGuestCount,
+    averagePrice: priceCount ? priceSum / priceCount : 0,
   };
 }
 
-function scoreListing(listing, profile) {
-  let points = 0;
-  let maxPoints = 0;
+function calculateRuleScore(listing, profile) {
+  let score = 0;
   const reasons = [];
 
-  const listingLocationTokens = getListingLocationTokens(listing);
+  const listingLocations = locationTokens(listing);
 
-  const preferredLocationTokens = Object.keys(profile.locationTokens);
-  maxPoints += preferredLocationTokens.length ? 30 : 0;
-
-  const hasLocationMatch = preferredLocationTokens.some((token) =>
-    listingLocationTokens.includes(token),
-  );
-
-  if (hasLocationMatch) {
-    points += 30;
-    reasons.push("Similar location to your previous stay");
+  if (profile.locationTokens.some((x) => listingLocations.includes(x))) {
+    score += 20;
+    reasons.push("Matches similar location");
   }
 
   const listingType = normalizeText(listing.propertyType || "");
-  const preferredTypes = Object.keys(profile.propertyTypes);
-  maxPoints += preferredTypes.length ? 20 : 0;
-
-  const hasTypeMatch = preferredTypes.some(
-    (type) => listingType.includes(type) || type.includes(listingType),
-  );
-
-  if (hasTypeMatch) {
-    points += 20;
-    reasons.push("Similar accommodation type");
+  if (
+    profile.propertyTypes.some(
+      (x) => listingType.includes(x) || x.includes(listingType),
+    )
+  ) {
+    score += 15;
+    reasons.push("Matches accommodation type");
   }
 
   const listingAmenities = Array.isArray(listing.amenities)
     ? listing.amenities.map(normalizeText)
     : [];
 
-  const preferredAmenities = Object.keys(profile.amenities);
-  const matchedAmenities = preferredAmenities.filter((amenity) =>
-    listingAmenities.some(
-      (item) => item.includes(amenity) || amenity.includes(item),
-    ),
+  const matchedAmenities = profile.amenities.filter((amenity) =>
+    listingAmenities.some((x) => x.includes(amenity) || amenity.includes(x)),
   );
 
-  if (preferredAmenities.length) {
-    maxPoints += 30;
+  if (profile.amenities.length) {
+    const ratio = matchedAmenities.length / profile.amenities.length;
+    score += Math.round(25 * ratio);
 
-    const amenityRatio =
-      matchedAmenities.length / Math.max(preferredAmenities.length, 1);
-
-    points += Math.round(30 * amenityRatio);
-
-    if (matchedAmenities.length) {
-      reasons.push(
-        `Matches ${matchedAmenities.length} preferred amenity${
-          matchedAmenities.length === 1 ? "" : "ies"
-        }`,
-      );
-    }
+    if (matchedAmenities.length) reasons.push("Matches preferred amenities");
   }
 
-  if (profile.preferredGuestCount) {
-    maxPoints += 10;
-
-    if (Number(listing.guestCount || 0) >= profile.preferredGuestCount) {
-      points += 10;
-      reasons.push("Suitable guest capacity");
-    }
+  if (
+    profile.preferredGuestCount &&
+    Number(listing.guestCount || 0) >= profile.preferredGuestCount
+  ) {
+    score += 10;
+    reasons.push("Suitable guest capacity");
   }
 
   const price = Number(listing.pricePerNight || listing.price || 0);
-
   if (profile.averagePrice && price > 0) {
-    maxPoints += 10;
-
-    const difference = Math.abs(price - profile.averagePrice);
-    const isSimilarPrice = difference <= profile.averagePrice * 0.3;
-
-    if (isSimilarPrice) {
-      points += 10;
+    const diff = Math.abs(price - profile.averagePrice);
+    if (diff <= profile.averagePrice * 0.3) {
+      score += 10;
       reasons.push("Similar price range");
     }
   }
 
-  const score = maxPoints > 0 ? Math.round((points / maxPoints) * 100) : 50;
-
-  return {
-    score: Math.max(1, Math.min(score, 98)),
-    reasons:
-      reasons.length > 0
-        ? [...new Set(reasons)]
-        : ["Recommended from available stays"],
-  };
+  return { score: Math.min(score, 80), reasons };
 }
 
-function mapListing(listing, result) {
+function mapListing(listing, score, semanticScore, ruleScore, reasons) {
+  const roomImage = Array.isArray(listing.sleepingArrangements)
+    ? listing.sleepingArrangements.find((x) => x.imageUrl)?.imageUrl
+    : "";
+
   return {
     listingId: Number(listing.listingId),
     title: listing.title || `Listing #${listing.listingId}`,
@@ -222,7 +201,7 @@ function mapListing(listing, result) {
     locationDescription: listing.locationDescription || "",
     pricePerNight: listing.pricePerNight || listing.price || null,
     imageUrls: listing.imageUrls || [],
-    imageUrl: listing.imageUrl || listing.imageUrls?.[0] || "",
+    imageUrl: listing.imageUrl || listing.imageUrls?.[0] || roomImage || "",
     summary: listing.summary || "",
     hostAddress: listing.hostAddress || listing.host || "",
     propertyType: listing.propertyType || "",
@@ -232,57 +211,92 @@ function mapListing(listing, result) {
     bathrooms: listing.bathrooms || null,
     amenities: listing.amenities || [],
     sleepingArrangements: listing.sleepingArrangements || [],
-    coverImage: listing.coverImage || "",
-    score: result.score,
-    reasons: result.reasons,
+    score,
+    semanticScore,
+    ruleScore,
+    reasons,
   };
 }
 
-function getRecommendations(walletAddress) {
-  const listings = getAllListings();
-  const profile = buildGuestProfile(walletAddress);
+async function getRecommendations(walletAddress) {
+  const listings = mergeListings();
+
+  await syncListingEmbeddings(listings);
+
+  const embeddings = readEmbeddings();
+  const profile = buildProfile(walletAddress, listings);
+  const userText = buildUserPreferenceText(walletAddress, listings);
+  const userEmbedding = await createEmbedding(userText);
+
   const normalizedWallet = normalizeText(walletAddress);
 
-  const candidateListings = listings.filter((listing) => {
-    const listingHost = listing.hostAddress || listing.host || "";
-
-    const isOwnListing =
-      listingHost && normalizeText(listingHost) === normalizedWallet;
-
-    const alreadyReserved = profile.reservedListingIds.includes(
+  const candidates = listings.filter((listing) => {
+    const host = listing.hostAddress || listing.host || "";
+    const isOwn = host && normalizeText(host) === normalizedWallet;
+    const reserved = profile.reservedListingIds.includes(
       Number(listing.listingId),
     );
+    const inactive = listing.isActive === false;
 
-    const isInactive = listing.isActive === false;
-
-    return !isOwnListing && !alreadyReserved && !isInactive;
+    return !isOwn && !reserved && !inactive;
   });
 
-  const recommendations = candidateListings
+  const recommendations = candidates
     .map((listing) => {
-      const result = scoreListing(listing, profile);
+      const listingEmbedding = embeddings.find(
+        (x) => Number(x.listingId) === Number(listing.listingId),
+      );
 
-      return mapListing(listing, result);
+      const rawSemantic =
+        userEmbedding && listingEmbedding?.embedding
+          ? cosineSimilarity(userEmbedding, listingEmbedding.embedding)
+          : 0;
+
+      const semanticScore = Math.round(Math.max(0, rawSemantic) * 100);
+      const ruleResult = calculateRuleScore(listing, profile);
+      const ruleScore = ruleResult.score;
+
+      const finalScore = Math.min(
+        Math.round(semanticScore * 0.7 + ruleScore * 0.3),
+        98,
+      );
+
+      const reasons = [
+        semanticScore > 70
+          ? "AI semantic similarity with previous stays"
+          : null,
+        ...ruleResult.reasons,
+      ].filter(Boolean);
+
+      return mapListing(
+        listing,
+        finalScore,
+        semanticScore,
+        ruleScore,
+        reasons.length ? reasons : ["AI recommended from available stays"],
+      );
+    })
+    .filter((listing) => {
+      if (profile.uniqueReservationCount === 0) {
+        return listing.score >= 35;
+      }
+
+      return listing.score >= 45 || listing.ruleScore > 0;
     })
     .sort((a, b) => b.score - a.score)
     .slice(0, 6);
 
   return {
     walletAddress,
+    profile,
     debug: {
       totalListings: listings.length,
-      reservationCount: profile.reservationCount,
-      uniqueReservationCount: profile.uniqueReservationCount,
+      candidateListingsCount: candidates.length,
       reservedListingIds: profile.reservedListingIds,
-      candidateListingsCount: candidateListings.length,
+      embeddingsCount: embeddings.length,
+      aiEnabled: Boolean(process.env.OPENAI_API_KEY),
     },
-    profile,
-    reservedListingIds: profile.reservedListingIds,
     recommendations,
-    message:
-      recommendations.length > 0
-        ? "Recommendations generated from previous reservation preferences."
-        : "No recommendation candidates available. The user has already reserved all available listings or only owns the remaining listings.",
   };
 }
 

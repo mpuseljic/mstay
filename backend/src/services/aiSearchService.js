@@ -1,12 +1,11 @@
-import path from "path";
-import { fileURLToPath } from "url";
-
-import { readJsonSafe, normalizeText } from "../utils/aiHelpers.js";
+import { normalizeText } from "../utils/aiHelpers.js";
 import { mergeListings } from "./listingMergeService.js";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const DATA_DIR = path.join(__dirname, "..", "data");
+import {
+  readEmbeddings,
+  syncListingEmbeddings,
+  createEmbedding,
+  cosineSimilarity,
+} from "./embeddingService.js";
 
 const STOP_WORDS = [
   "find",
@@ -29,12 +28,6 @@ const STOP_WORDS = [
   "please",
   "stay",
   "stays",
-  "apartment",
-  "apartments",
-  "house",
-  "houses",
-  "villa",
-  "villas",
   "nađi",
   "nadi",
   "pronađi",
@@ -55,19 +48,19 @@ const STOP_WORDS = [
   "s",
   "i",
   "ili",
-  "apartman",
-  "apartmane",
-  "kuća",
-  "kuca",
-  "vila",
-  "smještaj",
-  "smjestaj",
 ];
 
 const SYNONYMS = {
   kitchen: ["kuhinja", "kuhinju", "kitchen", "cooking", "cook"],
   tv: ["tv", "television", "televizor", "smart tv"],
-  "air conditioning": ["air conditioning", "klima", "klimu", "ac"],
+  "air conditioning": [
+    "air conditioning",
+    "klima",
+    "klimu",
+    "ac",
+    "hlađenje",
+    "hladenje",
+  ],
   wifi: ["wifi", "wi-fi", "internet"],
   parking: ["parking", "parkiralište", "parkiraliste", "parkirno"],
   pool: ["pool", "bazen"],
@@ -82,7 +75,7 @@ const SYNONYMS = {
   ],
   heating: ["heating", "grijanje"],
   elevator: ["elevator", "lift"],
-  workspace: ["workspace", "work desk", "radni stol"],
+  workspace: ["workspace", "work desk", "radni stol", "poseban prostor za rad"],
   pets: ["pets", "pet friendly", "kućni ljubimci", "kucni ljubimci", "pas"],
 };
 
@@ -97,41 +90,35 @@ function hasWord(text, words) {
   });
 }
 
-function getAllListingsForSearch() {
-  return mergeListings();
-}
+function detectChatIntent(message) {
+  const text = normalizeText(message);
 
-function getSearchableText(listing) {
-  const parts = [
-    listing.title,
-    listing.location,
-    listing.imageUrl,
-    listing.summary,
-    listing.descriptionShort,
-    listing.descriptionLong,
-    listing.propertyType,
-    listing.locationTitle,
-    listing.locationDescription,
-    listing.pricePerNight,
-    listing.price,
-    listing.guestCount,
-    listing.bedrooms,
-    listing.beds,
-    listing.bathrooms,
+  if (hasWord(text, ["hej", "hey", "hi", "hello", "bok", "cao", "ćao"])) {
+    return "greeting";
+  }
 
-    ...(Array.isArray(listing.amenities) ? listing.amenities : []),
-    ...(Array.isArray(listing.houseRules) ? listing.houseRules : []),
+  if (
+    text.includes("booking") ||
+    text.includes("reservation") ||
+    text.includes("rezerv") ||
+    text.includes("metamask") ||
+    text.includes("wallet") ||
+    text.includes("escrow") ||
+    text.includes("blockchain") ||
+    text.includes("smart contract")
+  ) {
+    return "platform_question";
+  }
 
-    ...(Array.isArray(listing.highlights)
-      ? listing.highlights.flatMap((x) => [x.title, x.description])
-      : []),
+  if (
+    hasWord(text, ["help", "pomoc", "pomoć"]) ||
+    text.includes("kako koristiti") ||
+    text.includes("what can you do")
+  ) {
+    return "help";
+  }
 
-    ...(Array.isArray(listing.sleepingArrangements)
-      ? listing.sleepingArrangements.flatMap((x) => [x.title, x.subtitle])
-      : []),
-  ];
-
-  return normalizeText(parts.filter(Boolean).join(" "));
+  return "listing_search";
 }
 
 function getImportantWords(message) {
@@ -163,45 +150,9 @@ function getExpandedSearchTerms(words) {
   return Array.from(terms);
 }
 
-function detectChatIntent(message) {
-  const text = normalizeText(message);
-
-  if (hasWord(text, ["hej", "hey", "hi", "hello", "bok", "cao", "ćao"])) {
-    return "greeting";
-  }
-
-  if (
-    text.includes("booking") ||
-    text.includes("reservation") ||
-    text.includes("rezerv") ||
-    text.includes("metamask") ||
-    text.includes("wallet") ||
-    text.includes("escrow") ||
-    text.includes("blockchain") ||
-    text.includes("smart contract")
-  ) {
-    return "platform_question";
-  }
-
-  if (
-    hasWord(text, ["help", "pomoc", "pomoć"]) ||
-    text.includes("kako koristiti") ||
-    text.includes("what can you do")
-  ) {
-    return "help";
-  }
-
-  const importantWords = getImportantWords(message);
-
-  if (importantWords.length > 0) {
-    return "listing_search";
-  }
-
-  return "general";
-}
-
 function extractFiltersFromMessage(message) {
   const text = normalizeText(message);
+  const listings = mergeListings();
 
   const filters = {
     location: null,
@@ -212,16 +163,18 @@ function extractFiltersFromMessage(message) {
     searchTerms: getExpandedSearchTerms(getImportantWords(message)),
   };
 
-  const listings = getAllListingsForSearch();
-
-  const locationsFromJson = listings
-    .flatMap((listing) => [listing.locationTitle, listing.locationDescription])
+  const locationsFromData = listings
+    .flatMap((listing) => [
+      listing.location,
+      listing.locationTitle,
+      listing.locationDescription,
+    ])
     .filter(Boolean)
     .map(normalizeText)
     .flatMap((location) => location.split(/[\s,.-]+/))
     .filter((x) => x.length >= 3);
 
-  const uniqueLocations = [...new Set(locationsFromJson)];
+  const uniqueLocations = [...new Set(locationsFromData)];
 
   for (const location of uniqueLocations) {
     if (text.includes(location)) {
@@ -240,7 +193,7 @@ function extractFiltersFromMessage(message) {
 
   const priceMatch =
     text.match(/(?:under|below|do|ispod|max|maksimalno)\s*(\d+)/i) ||
-    text.match(/(\d+)\s*(eur|eura|€)/i);
+    text.match(/(\d+)\s*(eur|eura|€|eth)/i);
 
   if (priceMatch) {
     filters.maxPrice = Number(priceMatch[1]);
@@ -273,17 +226,46 @@ function extractFiltersFromMessage(message) {
   return filters;
 }
 
-function calculateSearchScore(listing, filters, message) {
+function getSearchableText(listing) {
+  return normalizeText(
+    [
+      listing.title,
+      listing.location,
+      listing.locationTitle,
+      listing.locationDescription,
+      listing.summary,
+      listing.descriptionShort,
+      listing.descriptionLong,
+      listing.propertyType,
+      listing.guestCount,
+      listing.bedrooms,
+      listing.beds,
+      listing.bathrooms,
+      ...(Array.isArray(listing.amenities) ? listing.amenities : []),
+      ...(Array.isArray(listing.houseRules) ? listing.houseRules : []),
+      ...(Array.isArray(listing.highlights)
+        ? listing.highlights.flatMap((x) => [x.title, x.description])
+        : []),
+      ...(Array.isArray(listing.sleepingArrangements)
+        ? listing.sleepingArrangements.flatMap((x) => [x.title, x.subtitle])
+        : []),
+    ]
+      .filter(Boolean)
+      .join(" "),
+  );
+}
+
+function calculateRuleSearchScore(listing, filters) {
   let score = 0;
   const reasons = [];
 
   const searchableText = getSearchableText(listing);
   const locationText = normalizeText(
-    `${listing.locationTitle || ""} ${listing.locationDescription || ""}`,
+    `${listing.location || ""} ${listing.locationTitle || ""} ${listing.locationDescription || ""}`,
   );
 
   if (filters.location && locationText.includes(filters.location)) {
-    score += 35;
+    score += 20;
     reasons.push(`Location matches ${filters.location}`);
   }
 
@@ -291,14 +273,14 @@ function calculateSearchScore(listing, filters, message) {
     filters.guestCount &&
     Number(listing.guestCount || 0) >= filters.guestCount
   ) {
-    score += 20;
+    score += 15;
     reasons.push(`Suitable for ${filters.guestCount} guests`);
   }
 
   const price = Number(listing.pricePerNight || listing.price || 0);
 
   if (filters.maxPrice && price > 0 && price <= filters.maxPrice) {
-    score += 20;
+    score += 15;
     reasons.push("Price is within the requested budget");
   }
 
@@ -306,7 +288,7 @@ function calculateSearchScore(listing, filters, message) {
     filters.propertyType &&
     normalizeText(listing.propertyType || "").includes(filters.propertyType)
   ) {
-    score += 20;
+    score += 15;
     reasons.push("Property type matches");
   }
 
@@ -314,37 +296,37 @@ function calculateSearchScore(listing, filters, message) {
     const terms = getExpandedSearchTerms([normalizeText(amenity)]);
 
     if (terms.some((term) => searchableText.includes(term))) {
-      score += 30;
+      score += 20;
       reasons.push(`Has ${amenity}`);
     }
   });
 
   filters.searchTerms.forEach((term) => {
     if (searchableText.includes(term)) {
-      score += 12;
+      score += 5;
       reasons.push(`Matches "${term}"`);
     }
   });
 
-  const exactPhrase = normalizeText(message);
-
-  if (exactPhrase.length > 4 && searchableText.includes(exactPhrase)) {
-    score += 30;
-    reasons.push("Exact phrase match");
-  }
-
   return {
-    score: Math.min(score, 99),
+    score: Math.min(score, 80),
     reasons: [...new Set(reasons)],
   };
 }
 
-function mapListingForSearch(listing, result) {
+function mapListingForSearch(
+  listing,
+  score,
+  semanticScore,
+  ruleScore,
+  reasons,
+) {
   return {
     listingId: Number(listing.listingId),
     title: listing.title || `Listing #${listing.listingId}`,
     summary: listing.summary || "",
-    locationTitle: listing.locationTitle || "",
+    location: listing.location || "",
+    locationTitle: listing.locationTitle || listing.location || "",
     locationDescription: listing.locationDescription || "",
     propertyType: listing.propertyType || "",
     guestCount: listing.guestCount || null,
@@ -354,14 +336,116 @@ function mapListingForSearch(listing, result) {
     pricePerNight: listing.pricePerNight || listing.price || null,
     amenities: listing.amenities || [],
     sleepingArrangements: listing.sleepingArrangements || [],
-    imageUrl: listing.imageUrl || "",
+    imageUrls: listing.imageUrls || [],
+    imageUrl: listing.imageUrl || listing.imageUrls?.[0] || "",
     coverImage: listing.coverImage || "",
-    score: result.score,
-    reasons: result.reasons,
+    score,
+    semanticScore,
+    ruleScore,
+    reasons,
   };
 }
 
-function aiSearchListings(message) {
+function listingHasAmenity(listing, amenity) {
+  const searchableText = getSearchableText(listing);
+  const terms = getExpandedSearchTerms([normalizeText(amenity)]);
+
+  return terms.some((term) => searchableText.includes(term));
+}
+
+function hasHardMismatch(listing, filters) {
+  // Ako korisnik traži 6 guests, listing s 2 ili 4 gosta ne smije proći
+  if (
+    filters.guestCount &&
+    Number(listing.guestCount || 0) < filters.guestCount
+  ) {
+    return true;
+  }
+
+  // Ako korisnik traži house, apartmani ne smiju proći
+  if (filters.propertyType) {
+    const listingType = normalizeText(listing.propertyType || "");
+
+    if (
+      filters.propertyType === "house" &&
+      !listingType.includes("house") &&
+      !listingType.includes("villa") &&
+      !listingType.includes("cabin")
+    ) {
+      return true;
+    }
+
+    if (
+      filters.propertyType === "apartment" &&
+      !listingType.includes("apartment") &&
+      !listingType.includes("studio")
+    ) {
+      return true;
+    }
+  }
+
+  // Ako korisnik eksplicitno traži pool/parking itd., listing to mora imati
+  if (filters.amenities.length) {
+    const missingAmenity = filters.amenities.some(
+      (amenity) => !listingHasAmenity(listing, amenity),
+    );
+
+    if (missingAmenity) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+async function semanticListingSearch(message, filters) {
+  const listings = mergeListings();
+
+  await syncListingEmbeddings(listings);
+
+  const embeddings = readEmbeddings();
+  const queryEmbedding = await createEmbedding(message);
+
+  return listings
+    .filter((listing) => listing.isActive !== false)
+    .filter((listing) => !hasHardMismatch(listing, filters))
+    .map((listing) => {
+      const listingEmbedding = embeddings.find(
+        (item) => Number(item.listingId) === Number(listing.listingId),
+      );
+
+      const rawSemantic =
+        queryEmbedding && listingEmbedding?.embedding
+          ? cosineSimilarity(queryEmbedding, listingEmbedding.embedding)
+          : 0;
+
+      const semanticScore = Math.round(Math.max(0, rawSemantic) * 100);
+      const ruleResult = calculateRuleSearchScore(listing, filters);
+      const ruleScore = ruleResult.score;
+
+      const finalScore = Math.min(
+        Math.round(semanticScore * 0.45 + ruleScore * 0.55),
+        99,
+      );
+
+      const reasons = [
+        semanticScore > 70 ? "AI semantic match" : null,
+        ...ruleResult.reasons,
+      ].filter(Boolean);
+
+      return mapListingForSearch(
+        listing,
+        finalScore,
+        semanticScore,
+        ruleScore,
+        reasons.length ? reasons : ["AI semantic result"],
+      );
+    })
+    .filter((item) => item.score >= 35)
+    .sort((a, b) => b.score - a.score);
+}
+
+async function aiSearchListings(message) {
   const intent = detectChatIntent(message);
 
   if (intent === "greeting") {
@@ -380,7 +464,7 @@ function aiSearchListings(message) {
       message,
       intent,
       answer:
-        "I can search all saved listing details. Try: “Find me an apartment with kitchen, TV and air conditioning” or “Show me stays in Pula for 2 guests with parking”.",
+        "I can semantically search all listings using AI embeddings. Try: “Find a cozy apartment in Pula with kitchen, TV and air conditioning” or “Show me a pet-friendly stay with workspace”.",
       filters: null,
       results: [],
     };
@@ -391,43 +475,28 @@ function aiSearchListings(message) {
       message,
       intent,
       answer:
-        "mStay uses MetaMask for wallet login and smart contract escrow. When a guest books a stay, the payment is locked in the contract and released to the host after the reservation is completed.",
-      filters: null,
-      results: [],
-    };
-  }
-
-  if (intent === "general") {
-    return {
-      message,
-      intent,
-      answer:
-        "I can help you find accommodation. Mention anything from the listing details, such as kitchen, TV, parking, location, guests or price.",
+        "mStay uses MetaMask for wallet login and smart contract escrow. When a guest books a stay, payment is locked in the smart contract and released to the host after completion.",
       filters: null,
       results: [],
     };
   }
 
   const filters = extractFiltersFromMessage(message);
-  const listings = getAllListingsForSearch();
-
-  const results = listings
-    .map((listing) => {
-      const result = calculateSearchScore(listing, filters, message);
-      return mapListingForSearch(listing, result);
-    })
-    .filter((item) => item.score > 0)
-    .sort((a, b) => b.score - a.score);
+  const results = await semanticListingSearch(message, filters);
 
   return {
     message,
     intent,
     answer:
       results.length > 0
-        ? `I found ${results.length} matching stay${results.length === 1 ? "" : "s"} for you.`
-        : "I could not find a matching stay. Check if those details are saved in the listing details, then try again.",
+        ? `I found AI-matched stay${results.length === 1 ? "" : "s"} for you.`
+        : "I could not find a matching stay. Try changing the location, number of guests, budget or amenities.",
     filters,
-    results,
+    results: results.slice(0, 6),
+    debug: {
+      aiEnabled: Boolean(process.env.OPENAI_API_KEY),
+      searchMode: "semantic_embeddings",
+    },
   };
 }
 

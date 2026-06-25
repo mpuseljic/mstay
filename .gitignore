@@ -8,3 +8,5 @@ coverage
 typechain-types
 cypress/videos
 cypress/screenshots
+
+src/data/listingEmbeddings.json

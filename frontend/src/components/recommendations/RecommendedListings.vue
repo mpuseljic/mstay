@@ -91,9 +91,10 @@ function getListingImage(listing) {
   const roomImage = listing.sleepingArrangements?.find((x) => x.imageUrl)?.imageUrl
 
   return (
-    roomImage ||
-    listing.coverImage ||
+    listing.imageUrls?.[0] ||
     listing.imageUrl ||
+    listing.coverImage ||
+    roomImage ||
     'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=1200&q=80'
   )
 }

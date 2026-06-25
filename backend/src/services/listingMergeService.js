@@ -28,7 +28,22 @@ function getBaseListingsFromEvents() {
   const base = Array.isArray(events.listings) ? events.listings : [];
 
   return base.map((listing) => {
-    const rawImageUrls = listing.imageUrls || listing.images || [];
+    const rawImageUrls =
+      listing.imageUrls ||
+      listing.images ||
+      (typeof listing.pricePerNight === "string" &&
+      listing.pricePerNight.includes("http")
+        ? listing.pricePerNight
+            .split(",")
+            .map((x) => x.trim())
+            .filter(Boolean)
+        : []);
+
+    const cleanPrice =
+      typeof listing.pricePerNight === "string" &&
+      listing.pricePerNight.includes("http")
+        ? null
+        : listing.pricePerNight || listing.price || null;
 
     return {
       id: normalizeListingId(listing.id || listing.listingId),
@@ -41,7 +56,7 @@ function getBaseListingsFromEvents() {
         listing.imageUrl ||
         (Array.isArray(rawImageUrls) ? rawImageUrls[0] : "") ||
         "",
-      pricePerNight: listing.pricePerNight || listing.price || null,
+      pricePerNight: cleanPrice,
       isActive: listing.isActive ?? true,
     };
   });
@@ -85,7 +100,9 @@ function mergeListings() {
         imageUrls:
           Array.isArray(base.imageUrls) && base.imageUrls.length
             ? base.imageUrls
-            : detail.imageUrls || [],
+            : Array.isArray(detail.imageUrls)
+              ? detail.imageUrls
+              : [],
 
         imageUrl:
           base.imageUrl ||

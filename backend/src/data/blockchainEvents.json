@@ -142,6 +142,19 @@
       "logIndex": null,
       "blockNumber": null,
       "capturedAt": "2026-06-25T08:18:23.880Z"
+    },
+    {
+      "id": "1",
+      "listingId": "1",
+      "guest": "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC",
+      "host": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+      "checkInDate": "1783641600",
+      "checkOutDate": "1783814400",
+      "totalPrice": "2",
+      "transactionHash": null,
+      "logIndex": null,
+      "blockNumber": null,
+      "capturedAt": "2026-06-28T11:20:23.252Z"
     }
   ],
   "reviews": [],

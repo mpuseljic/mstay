@@ -1,1 +1,20 @@
-[]
+[
+  {
+    "walletAddress": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
+    "firstName": "Test",
+    "lastName": "Test",
+    "displayName": "",
+    "bio": "",
+    "location": "",
+    "jobTitle": "",
+    "languages": [],
+    "about": "",
+    "avatarUrl": "",
+    "isVerified": false,
+    "verificationProvider": "",
+    "verificationLevel": "",
+    "verifiedAt": null,
+    "updatedAt": "2026-06-29T14:21:41.815Z",
+    "createdAt": "2026-06-29T14:21:41.815Z"
+  }
+]

@@ -43,7 +43,8 @@ const tokenBalance = ref('0')
 const isMetaMaskInstalled = ref(false)
 const isCorrectNetwork = ref(true)
 const currentChainId = ref('')
-const requiredChainId = ref('0x7a69') // Hardhat 31337
+// const requiredChainId = ref('0x7a69') // Hardhat 31337
+const requiredChainId = ref('0xaa36a7') // Sepolia
 const onboardingMsg = ref('')
 
 function formatDate(unix) {
